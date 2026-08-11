@@ -28,5 +28,5 @@ android {
 }
 
 dependencies {
-    // Tanpa dependensi eksternal agar APK kecil
+    // Kosong agar APK tetap ringan murni Native Framework
 }
