@@ -7,10 +7,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.json";
 
-    private SwitchMaterial sw;
+    private Switch sw;
     private TextView tvMode, tvKB, tvPIF, tvLast;
     private SharedPreferences sp;
 
@@ -43,7 +43,6 @@ public class MainActivity extends AppCompatActivity {
         
         initUI();
 
-        // Jalankan proses pembuatan folder & file di Background Thread agar UI tidak freeze
         new Thread(() -> {
             applyFallback();
             if (!sp.getBoolean("manual", false)) {
@@ -82,13 +81,11 @@ public class MainActivity extends AppCompatActivity {
         File pifFile = new File(PIF_PATH);
 
         if (!kbFile.exists()) {
-            Log.d(TAG, "Keybox tidak ditemukan, menulis fallback...");
             String kbData = readRaw(R.raw.default_keybox);
             if (!kbData.isEmpty()) write(KB_PATH, kbData);
         }
 
         if (!pifFile.exists()) {
-            Log.d(TAG, "Props tidak ditemukan, menulis fallback...");
             String pifData = readRaw(R.raw.default_pif);
             if (!pifData.isEmpty()) write(PIF_PATH, pifData);
         }
@@ -160,10 +157,7 @@ public class MainActivity extends AppCompatActivity {
     private void write(String path, String content) {
         try {
             File dir = new File(DIR);
-            if (!dir.exists()) {
-                boolean created = dir.mkdirs();
-                Log.d(TAG, "Status mkdirs /data/system/pif: " + created);
-            }
+            if (!dir.exists()) dir.mkdirs();
 
             FileOutputStream f = new FileOutputStream(path);
             f.write(content.getBytes());
@@ -184,7 +178,6 @@ public class MainActivity extends AppCompatActivity {
             r.close();
             return sb.toString();
         } catch (Exception e) {
-            Log.e(TAG, "Gagal membaca R.raw ID " + id, e);
             return "";
         }
     }
@@ -199,7 +192,6 @@ public class MainActivity extends AppCompatActivity {
             r.close();
             return sb.toString();
         } catch (Exception e) {
-            Log.e(TAG, "Gagal membaca Uri: " + u, e);
             return "";
         }
     }
