@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchMode" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Mode Manual" />
+
+    <TextView android:id="@+id/tvModeStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Status: Auto" android:layout_marginBottom="20dp"/>
+
+    <LinearLayout android:id="@+id/containerManual" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:visibility="gone">
+        <Button android:id="@+id/btnKeybox" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Pilih Keybox XML" />
+        <TextView android:id="@+id/tvKeyboxStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Keybox: -" android:layout_marginBottom="10dp"/>
+        <Button android:id="@+id/btnProps" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Pilih Props JSON" />
+        <TextView android:id="@+id/tvPropsStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Props: -" />
+    </LinearLayout>
+
+    <Button android:id="@+id/btnCheck" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Cek Update GitHub" android:layout_marginTop="20dp" />
+    <TextView android:id="@+id/tvLastCheck" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Terakhir cek: -" android:gravity="center" android:layout_marginTop="5dp"/>
+</LinearLayout>
