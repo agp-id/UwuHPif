@@ -25,7 +25,7 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String TAG = "PifManager";
-    private static final String DIR = "/data/system";
+    private static final String DIR = "/data/system/uwuh";
     private static final String KB_PATH = DIR + "/custom_keybox.xml";
     private static final String PIF_PATH = DIR + "/custom_pif.json";
     
