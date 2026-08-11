@@ -13,11 +13,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      # Paksa instalasi Gradle versi 8.5 (versi paling stabil untuk AGP 8.2.x)
       - name: Setup Gradle 8.5
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.5'
+          cache-disabled: false # Set to true jika server cache GitHub terus menerus error
       
       - name: Build with Gradle
         run: gradle assembleDebug
