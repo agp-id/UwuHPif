@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.uwuh.pif"
     android:sharedUserId="android.uid.system">
 
@@ -10,7 +11,21 @@
     <application 
         android:allowBackup="false" 
         android:label="PIF Manager" 
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@style/Theme.AppCompat.DayNight.DarkActionBar">
+
+        <!-- Matikan auto-initializer yang menyebabkan crash -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                tools:node="remove" />
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                tools:node="remove" />
+        </provider>
 
         <activity 
             android:name="com.uwuh.pif.MainActivity" 
