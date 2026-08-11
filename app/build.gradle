@@ -31,5 +31,5 @@ android {
 }
 
 dependencies {
-    // KOSONG - Murni menggunakan framework Java/Android bawaan ROM
+    // Kosong - Murni memakai framework bawaan ROM
 }
