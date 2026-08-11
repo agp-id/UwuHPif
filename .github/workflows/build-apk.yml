@@ -13,15 +13,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      - uses: gradle/actions/setup-gradle@v3
+      # Paksa instalasi Gradle versi 8.5 (versi paling stabil untuk AGP 8.2.x)
+      - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
       
       - name: Build with Gradle
-        # GANTI 'NAMA_FOLDER' sesuai nama sub-folder project kamu di GitHub
-        # Jika file build.gradle ada di folder 'app', ubah jadi: working-directory: ./app
-        working-directory: ./
         run: gradle assembleDebug
         
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: pif-app
           path: "**/build/outputs/apk/debug/app-debug.apk"
