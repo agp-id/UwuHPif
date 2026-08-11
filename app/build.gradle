@@ -16,8 +16,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -28,5 +28,6 @@ android {
 }
 
 dependencies {
-    // Kosong agar APK tetap ringan murni Native Framework
+    // Tambahkan library startup agar kelas InitializationProvider ditemukan
+    implementation 'androidx.startup:startup-runtime:1.1.1'
 }
