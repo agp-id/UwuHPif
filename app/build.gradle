@@ -17,7 +17,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
-            shrinkResources false
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -28,5 +28,6 @@ android {
 }
 
 dependencies {
-    // KOSONGKAN - Murni menggunakan android.jar dari SDK Android OS
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.startup:startup-runtime:1.1.1'
 }
