@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AndroidAttestation>
+    <Keybox>
+        <Key algorithm="ecdsa">
+            <PrivateKey format="pem"></PrivateKey>
+            <CertificateChain>
+                <Certificate format="pem"></Certificate>
+            </CertificateChain>
+        </Key>
+    </Keybox>
+</AndroidAttestation>
