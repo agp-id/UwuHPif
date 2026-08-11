@@ -19,7 +19,7 @@ import java.util.Locale;
 
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "PifManagerBoot";
-    private static final String DIR = "/data/system/pif";
+    private static final String DIR = "/data/system/uwuh";
     private static final String KB_PATH = DIR + "/custom_keybox.xml";
     private static final String PIF_PATH = DIR + "/custom_pif.json";
 
