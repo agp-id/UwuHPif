@@ -11,9 +11,10 @@
     <application 
         android:allowBackup="false" 
         android:label="PIF Manager" 
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@android:style/Theme.DeviceDefault"
+        tools:remove="android:appComponentFactory">
 
-        <!-- HAPUS KELAS INITIALIZATION PROVIDER YANG MEMINDAHKAN CRASH -->
+        <!-- HAPUS KELAS INITIALIZATION PROVIDER SECARA TOTAL -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
