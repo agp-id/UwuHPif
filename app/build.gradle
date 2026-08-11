@@ -16,8 +16,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -28,5 +28,5 @@ android {
 }
 
 dependencies {
-    // Kosong: Murni menggunakan Framework Java Android Bawaan
+    // Tanpa dependensi eksternal agar APK kecil
 }
