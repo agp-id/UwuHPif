@@ -1,17 +1,13 @@
-pluginManagement {
+buildscript {
     repositories {
         google()
         mavenCentral()
-        gradlePluginPortal()
     }
-}
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-    repositories {
-        google()
-        mavenCentral()
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.2'
     }
 }
 
-rootProject.name = "UwuHPif"
-include ':app'
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
