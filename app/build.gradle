@@ -16,7 +16,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true // Mengompres dan menghapus kode tidak terpakai
+            shrinkResources true // Menghapus resource yang tidak dipakai
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -27,6 +28,6 @@ android {
 }
 
 dependencies {
+    // Menggunakan UI ringan bawaan sistem
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
 }
