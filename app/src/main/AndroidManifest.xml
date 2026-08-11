@@ -5,11 +5,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application 
         android:allowBackup="false" 
         android:label="PIF Manager" 
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+        android:theme="@android:style/Theme.DeviceDefault.Settings">
         
         <activity 
             android:name="com.uwuh.pif.MainActivity" 
@@ -19,5 +20,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name="com.uwuh.pif.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 </manifest>
