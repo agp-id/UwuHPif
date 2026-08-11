@@ -1,15 +1,12 @@
 package com.uwuh.pif;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.View; // IMPORT VIEW UNTUK MENGATASI ERROR View.VISIBLE / View.GONE
-import android.widget.Button;
+import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,6 +24,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "PifManager";
     private static final String DIR = "/data/system/pif";
     private static final String KB_PATH = DIR + "/custom_keybox.xml";
     private static final String PIF_PATH = DIR + "/custom_pif.json";
@@ -42,9 +40,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(b);
         setContentView(R.layout.activity_main);
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
+        
         initUI();
-        applyFallback();
-        if (!sp.getBoolean("manual", false)) checkUpdate(false);
+
+        // Jalankan proses pembuatan folder & file di Background Thread agar UI tidak freeze
+        new Thread(() -> {
+            applyFallback();
+            if (!sp.getBoolean("manual", false)) {
+                checkUpdateInternal(false);
+            }
+        }).start();
     }
 
     private void initUI() {
@@ -63,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.btnKeybox).setOnClickListener(v -> pickFile(101));
         findViewById(R.id.btnProps).setOnClickListener(v -> pickFile(102));
-        findViewById(R.id.btnCheck).setOnClickListener(v -> checkUpdate(true));
+        findViewById(R.id.btnCheck).setOnClickListener(v -> new Thread(() -> checkUpdateInternal(true)).start());
         tvLast.setText("Terakhir cek: " + sp.getString("last", "-"));
     }
 
@@ -73,24 +78,43 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void applyFallback() {
-        if (!new File(KB_PATH).exists()) write(KB_PATH, readRaw(R.raw.default_keybox));
-        if (!new File(PIF_PATH).exists()) write(PIF_PATH, readRaw(R.raw.default_pif));
+        File kbFile = new File(KB_PATH);
+        File pifFile = new File(PIF_PATH);
+
+        if (!kbFile.exists()) {
+            Log.d(TAG, "Keybox tidak ditemukan, menulis fallback...");
+            String kbData = readRaw(R.raw.default_keybox);
+            if (!kbData.isEmpty()) write(KB_PATH, kbData);
+        }
+
+        if (!pifFile.exists()) {
+            Log.d(TAG, "Props tidak ditemukan, menulis fallback...");
+            String pifData = readRaw(R.raw.default_pif);
+            if (!pifData.isEmpty()) write(PIF_PATH, pifData);
+        }
     }
 
-    private void checkUpdate(boolean toast) {
-        new Thread(() -> {
-            try {
-                String k = fetch(URL_KB); String p = fetch(URL_PIF);
-                if (k != null) write(KB_PATH, k);
-                if (p != null) write(PIF_PATH, p);
-                String d = new SimpleDateFormat("dd/MM/yyyy", Locale.US).format(new Date());
-                sp.edit().putString("last", d).apply();
-                runOnUiThread(() -> {
-                    tvLast.setText("Terakhir cek: " + d);
-                    if(toast) Toast.makeText(this, "Update berhasil!", Toast.LENGTH_SHORT).show();
-                });
-            } catch (Exception e) { runOnUiThread(() -> { if(toast) Toast.makeText(this, "Gagal update", Toast.LENGTH_SHORT).show(); }); }
-        }).start();
+    private void checkUpdateInternal(boolean toast) {
+        try {
+            String k = fetch(URL_KB); 
+            String p = fetch(URL_PIF);
+            
+            if (k != null && !k.isEmpty()) write(KB_PATH, k);
+            if (p != null && !p.isEmpty()) write(PIF_PATH, p);
+
+            String d = new SimpleDateFormat("dd/MM/yyyy", Locale.US).format(new Date());
+            sp.edit().putString("last", d).apply();
+
+            runOnUiThread(() -> {
+                tvLast.setText("Terakhir cek: " + d);
+                if (toast) Toast.makeText(this, "Update berhasil!", Toast.LENGTH_SHORT).show();
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal update dari GitHub: " + e.getMessage());
+            if (toast) {
+                runOnUiThread(() -> Toast.makeText(this, "Gagal update", Toast.LENGTH_SHORT).show());
+            }
+        }
     }
 
     private void pickFile(int code) {
@@ -102,38 +126,81 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
-        if (res == Activity.RESULT_OK && data != null) {
-            String c = readUri(data.getData());
-            if (req == 101) { write(KB_PATH, c); tvKB.setText("Keybox: Terpasang"); }
-            else { write(PIF_PATH, c); tvPIF.setText("Props: Terpasang"); }
+        if (res == Activity.RESULT_OK && data != null && data.getData() != null) {
+            new Thread(() -> {
+                String c = readUri(data.getData());
+                if (!c.isEmpty()) {
+                    if (req == 101) { 
+                        write(KB_PATH, c); 
+                        runOnUiThread(() -> tvKB.setText("Keybox: Terpasang")); 
+                    } else { 
+                        write(PIF_PATH, c); 
+                        runOnUiThread(() -> tvPIF.setText("Props: Terpasang")); 
+                    }
+                }
+            }).start();
         }
     }
 
-    private String fetch(String url) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+    private String fetch(String urlStr) throws Exception {
+        URL url = new URL(urlStr);
+        HttpURLConnection c = (HttpURLConnection) url.openConnection();
         c.setConnectTimeout(5000);
+        c.setReadTimeout(5000);
         if (c.getResponseCode() != 200) return null;
+        
         BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
-        StringBuilder sb = new StringBuilder(); String l;
+        StringBuilder sb = new StringBuilder(); 
+        String l;
         while ((l = r.readLine()) != null) sb.append(l).append("\n");
+        r.close();
         return sb.toString();
     }
 
-    private void write(String p, String c) {
-        try { new File(DIR).mkdirs(); FileOutputStream f = new FileOutputStream(p); f.write(c.getBytes()); f.close(); } catch (Exception e) {}
+    private void write(String path, String content) {
+        try {
+            File dir = new File(DIR);
+            if (!dir.exists()) {
+                boolean created = dir.mkdirs();
+                Log.d(TAG, "Status mkdirs /data/system/pif: " + created);
+            }
+
+            FileOutputStream f = new FileOutputStream(path);
+            f.write(content.getBytes());
+            f.close();
+            Log.d(TAG, "BERHASIL menulis file ke: " + path);
+        } catch (Exception e) {
+            Log.e(TAG, "GAGAL menulis file ke " + path + " -> Error: " + e.getMessage(), e);
+        }
     }
 
     private String readRaw(int id) {
         try {
             InputStream is = getResources().openRawResource(id);
             BufferedReader r = new BufferedReader(new InputStreamReader(is));
-            StringBuilder sb = new StringBuilder(); String l;
+            StringBuilder sb = new StringBuilder(); 
+            String l;
             while ((l = r.readLine()) != null) sb.append(l).append("\n");
+            r.close();
             return sb.toString();
-        } catch (Exception e) { return ""; }
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal membaca R.raw ID " + id, e);
+            return "";
+        }
     }
 
     private String readUri(Uri u) {
-        try { InputStream is = getContentResolver().openInputStream(u); BufferedReader r = new BufferedReader(new InputStreamReader(is)); StringBuilder sb = new StringBuilder(); String l; while ((l = r.readLine()) != null) sb.append(l).append("\n"); return sb.toString(); } catch (Exception e) { return ""; }
+        try {
+            InputStream is = getContentResolver().openInputStream(u);
+            BufferedReader r = new BufferedReader(new InputStreamReader(is));
+            StringBuilder sb = new StringBuilder(); 
+            String l;
+            while ((l = r.readLine()) != null) sb.append(l).append("\n");
+            r.close();
+            return sb.toString();
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal membaca Uri: " + u, e);
+            return "";
+        }
     }
 }
