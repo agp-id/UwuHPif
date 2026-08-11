@@ -1,16 +1,30 @@
 package com.uwuh.pif;
 
 import android.app.Activity;
-import android.content.*;
-import android.net.*;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
-import android.widget.*;
+import android.view.View; // IMPORT VIEW UNTUK MENGATASI ERROR View.VISIBLE / View.GONE
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.switchmaterial.SwitchMaterial;
-import java.io.*;
-import java.net.*;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private static final String DIR = "/data/system/pif";
@@ -39,14 +53,14 @@ public class MainActivity extends AppCompatActivity {
         tvKB = findViewById(R.id.tvKeyboxStatus);
         tvPIF = findViewById(R.id.tvPropsStatus);
         tvLast = findViewById(R.id.tvLastCheck);
-        
+
         sw.setChecked(sp.getBoolean("manual", false));
         sw.setOnCheckedChangeListener((v, isManual) -> {
             sp.edit().putBoolean("manual", isManual).apply();
             containerVisible(isManual);
         });
         containerVisible(sw.isChecked());
-        
+
         findViewById(R.id.btnKeybox).setOnClickListener(v -> pickFile(101));
         findViewById(R.id.btnProps).setOnClickListener(v -> pickFile(102));
         findViewById(R.id.btnCheck).setOnClickListener(v -> checkUpdate(true));
@@ -75,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
                     tvLast.setText("Terakhir cek: " + d);
                     if(toast) Toast.makeText(this, "Update berhasil!", Toast.LENGTH_SHORT).show();
                 });
-            } catch (Exception e) { runOnUiThread(() -> { if(toast) Toast.makeText(this, "Gagal", Toast.LENGTH_SHORT).show(); }); }
+            } catch (Exception e) { runOnUiThread(() -> { if(toast) Toast.makeText(this, "Gagal update", Toast.LENGTH_SHORT).show(); }); }
         }).start();
     }
 
@@ -97,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String fetch(String url) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setConnectTimeout(5000);
         if (c.getResponseCode() != 200) return null;
         BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
         StringBuilder sb = new StringBuilder(); String l;
@@ -109,7 +124,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String readRaw(int id) {
-        try { InputStream is = getResources().openRawResource(id); BufferedReader r = new BufferedReader(new InputStreamReader(is)); StringBuilder sb = new StringBuilder(); String l; while ((l = r.readLine()) != null) sb.append(l).append("\n"); return sb.toString(); } catch (Exception e) { return ""; }
+        try {
+            InputStream is = getResources().openRawResource(id);
+            BufferedReader r = new BufferedReader(new InputStreamReader(is));
+            StringBuilder sb = new StringBuilder(); String l;
+            while ((l = r.readLine()) != null) sb.append(l).append("\n");
+            return sb.toString();
+        } catch (Exception e) { return ""; }
     }
 
     private String readUri(Uri u) {
