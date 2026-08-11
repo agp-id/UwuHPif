@@ -31,18 +31,12 @@ public class BootReceiver extends BroadcastReceiver {
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) || 
             "android.intent.action.LOCKED_BOOT_COMPLETED".equals(action)) {
             
-            Log.d(TAG, "Boot selesai. Memeriksa konfigurasi PIF...");
-
             SharedPreferences sp = context.getSharedPreferences("pif_prefs", Context.MODE_PRIVATE);
             boolean isManual = sp.getBoolean("manual", false);
 
             new Thread(() -> {
-                // 1. Selalu pasang file fallback jika belum ada sama sekali
                 applyFallback(context);
-
-                // 2. Jika mode AUTO aktif, langsung cek update online dari GitHub saat booting
                 if (!isManual) {
-                    Log.d(TAG, "Mode Auto Aktif: Menjalankan cek update online saat boot...");
                     checkUpdateInternal(context, sp);
                 }
             }).start();
@@ -76,7 +70,7 @@ public class BootReceiver extends BroadcastReceiver {
             sp.edit().putString("last", date).apply();
             Log.d(TAG, "Auto update saat boot BERHASIL dilakukan!");
         } catch (Exception e) {
-            Log.e(TAG, "Auto update saat boot GAGAL (Mungkin belum terkoneksi internet): " + e.getMessage());
+            Log.e(TAG, "Auto update saat boot GAGAL: " + e.getMessage());
         }
     }
 
