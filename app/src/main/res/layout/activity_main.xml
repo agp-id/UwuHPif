@@ -1,71 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <Switch
-        android:id="@+id/switchMode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Mode Manual"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/tvModeStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Mode: Auto"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tvLastCheck"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Terakhir cek: -" />
+    android:layout_height="match_parent">
 
     <LinearLayout
-        android:id="@+id/containerManual"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
         android:orientation="vertical"
-        android:visibility="gone">
-
-        <Button
-            android:id="@+id/btnKeybox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Pilih Keybox XML" />
+        android:padding="16dp">
 
         <TextView
-            android:id="@+id/tvKeyboxStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Keybox: Belum dipasang" />
+            android:text="PIF Manager"
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnProps"
+        <Switch
+            android:id="@+id/switchAuto"
             android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Update Otomatis saat Boot"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Pilih Props JSON" />
+            android:text="Status: Mode Auto Aktif"
+            android:textColor="#555555" />
 
         <TextView
-            android:id="@+id/tvPropsStatus"
+            android:id="@+id/tvLastCheck"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Props: Belum dipasang" />
+            android:layout_marginTop="4dp"
+            android:text="Terakhir update: -"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="#CCCCCC" />
+
+        <!-- Panel Manual (Hanya Muncul Jika Switch Auto Mati) -->
+        <LinearLayout
+            android:id="@+id/panelManual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Opsi Manual:"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnPickKeybox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Pilih File Keybox (.xml)" />
+
+            <Button
+                android:id="@+id/btnPickProps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Pilih File Props (.json)" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnCheckUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Cek Update Sekarang" />
+
     </LinearLayout>
-
-    <Button
-        android:id="@+id/btnCheck"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Cek / Update Sekarang" />
-
-</LinearLayout>
+</ScrollView>
