@@ -7,7 +7,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -30,7 +29,6 @@ public class MainActivity extends Activity {
     private static final String KB_PATH = DIR + "/custom_keybox.xml";
     private static final String PIF_PATH = DIR + "/custom_pif.json";
     
-    // Ganti URL ini dengan URL repository GitHub kamu
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.json";
 
@@ -60,16 +58,13 @@ public class MainActivity extends Activity {
             updateUIState(autoChecked);
         });
 
-        // Event Tombol
         findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile(101));
         findViewById(R.id.btnPickProps).setOnClickListener(v -> pickFile(102));
-        
-        // ID disesuaikan dengan activity_main.xml (btnCheckUpdate)
         findViewById(R.id.btnCheckUpdate).setOnClickListener(v -> {
             new Thread(() -> checkUpdateOnline(true)).start();
         });
 
-        // Jalankan pemasangan fallback saat pertama kali app dibuka
+        // Jalankan pemasangan fallback di Thread terpisah agar UI tidak lag
         new Thread(() -> {
             applyFallback();
             if (sp.getBoolean("auto", true)) {
@@ -85,17 +80,24 @@ public class MainActivity extends Activity {
     }
 
     private void applyFallback() {
-        File kbFile = new File(KB_PATH);
-        File pifFile = new File(PIF_PATH);
+        try {
+            File dir = new File(DIR);
+            if (!dir.exists()) dir.mkdirs();
 
-        if (!kbFile.exists()) {
-            String kbData = readRaw(R.raw.default_keybox);
-            if (!kbData.isEmpty()) write(KB_PATH, kbData);
-        }
+            File kbFile = new File(KB_PATH);
+            File pifFile = new File(PIF_PATH);
 
-        if (!pifFile.exists()) {
-            String pifData = readRaw(R.raw.default_pif);
-            if (!pifData.isEmpty()) write(PIF_PATH, pifData);
+            if (!kbFile.exists()) {
+                String kbData = readRaw(R.raw.default_keybox);
+                if (!kbData.isEmpty()) write(KB_PATH, kbData);
+            }
+
+            if (!pifFile.exists()) {
+                String pifData = readRaw(R.raw.default_pif);
+                if (!pifData.isEmpty()) write(PIF_PATH, pifData);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal terapkan fallback: " + e.getMessage());
         }
     }
 
@@ -182,6 +184,7 @@ public class MainActivity extends Activity {
             FileOutputStream f = new FileOutputStream(path);
             f.write(content.getBytes());
             f.close();
+            Log.d(TAG, "Sukses menulis ke: " + path);
         } catch (Exception e) {
             Log.e(TAG, "Gagal menulis file ke " + path + ": " + e.getMessage());
         }
@@ -212,6 +215,7 @@ public class MainActivity extends Activity {
             r.close();
             return sb.toString().trim();
         } catch (Exception e) {
+            Log.e(TAG, "Resource raw ID " + rawResId + " tidak ditemukan: " + e.getMessage());
             return "";
         }
     }
