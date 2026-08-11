@@ -1,3 +1,4 @@
+// build.gradle (Root)
 buildscript {
     repositories {
         google()
@@ -8,12 +9,7 @@ buildscript {
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+// JANGAN GUNAKAN allprojects { repositories { ... } } DI SINI
 
 task clean(type: Delete) {
     delete rootProject.buildDir
