@@ -2,12 +2,21 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
+def find_arrays_xml(base_dir="temp_decoded"):
+    # Melakukan pencarian file arrays.xml secara rekursif di dalam folder hasil decompile
+    for root, dirs, files in os.walk(base_dir):
+        if "arrays.xml" in files:
+            return os.path.join(root, "arrays.xml")
+    return None
+
 def parse_arrays():
-    xml_path = "temp_decoded/res/values/arrays.xml"
+    xml_path = find_arrays_xml("temp_decoded")
     
-    if not os.path.exists(xml_path):
-        print(f"Error: {xml_path} tidak ditemukan!")
+    if not xml_path or not os.path.exists(xml_path):
+        print("Error: File arrays.xml tidak ditemukan di dalam folder hasil decompile!")
         sys.exit(1)
+
+    print(f"File arrays.xml ditemukan di: {xml_path}")
 
     try:
         tree = ET.parse(xml_path)
@@ -20,14 +29,14 @@ def parse_arrays():
             name = child.get('name')
             if name == 'keybox':
                 for item in child.findall('item'):
-                    val = item.text.strip()
+                    val = item.text.strip() if item.text else ""
                     if val.startswith('"') and val.endswith('"'):
                         val = val[1:-1]
                     val = val.replace('\\n', '\n')
                     keybox_items.append(val)
             elif name == 'device_props' or name == 'full_device_props':
                 for item in child.findall('item'):
-                    val = item.text.strip()
+                    val = item.text.strip() if item.text else ""
                     if val.startswith('"') and val.endswith('"'):
                         val = val[1:-1]
                     props_items.append(val)
@@ -71,7 +80,6 @@ def parse_arrays():
             success_prop = True
             print("Berhasil membuat danda_pif/pif.prop")
 
-        # Pastikan keduanya benar-benar berhasil dibuat sebelum exit sukses
         if success_keybox and success_prop:
             sys.exit(0)
         else:
