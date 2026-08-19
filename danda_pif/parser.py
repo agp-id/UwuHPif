@@ -32,6 +32,10 @@ def parse_arrays():
     props_items = []
 
     for xml_path in xml_files:
+        # Cari file asli arrays.xml dari hasil decompile untuk disalin nanti
+        if os.path.basename(xml_path) == "arrays.xml":
+            target_arrays_path = xml_path
+            
         try:
             tree = ET.parse(xml_path)
             root = tree.getroot()
