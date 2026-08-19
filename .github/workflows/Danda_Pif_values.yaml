@@ -3,7 +3,7 @@ name: Get Danda`s PIF APK Resource
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */23 * * *'
+    - cron: '0 */6 * * *'
 
 jobs:
   build:
@@ -12,7 +12,7 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout Repositorya
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Apktool / Java
@@ -26,14 +26,13 @@ jobs:
           SIG_HASH: ${{ secrets.SIG_HASH }} 
         run: |
           echo "Downloading PIF.apk..."
-          curl -s "https://${SIG_HASH}@raw.githubusercontent.com/Danda420/things/fingerprint/PIF.apk" > PIF.apk
-          
-          # Hitung MD5 dari APK baru
-          NEW_MD5=$(md5sum PIF.apk | awk '{print $1}')
-          echo "New MD5: $NEW_MD5"
-          
-          # Buat folder danda_pif jika belum ada
+          # Download langsung ke folder danda_pif/ agar tersimpan
           mkdir -p danda_pif
+          curl -s "https://${SIG_HASH}@raw.githubusercontent.com/Danda420/things/fingerprint/PIF.apk" > danda_pif/PIF.apk
+          
+          # Hitung MD5 dari APK yang baru diunduh
+          NEW_MD5=$(md5sum danda_pif/PIF.apk | awk '{print $1}')
+          echo "New MD5: $NEW_MD5"
           
           # Cek apakah file danda_pif/pif.md5 sebelumnya sudah ada
           if [ -f "danda_pif/pif.md5" ]; then
@@ -41,6 +40,8 @@ jobs:
             echo "Old MD5: $OLD_MD5"
             if [ "$NEW_MD5" = "$OLD_MD5" ]; then
               echo "MD5 sama. Tidak ada perubahan, membatalkan proses."
+              # Hapus file APK yang baru didownload agar tidak ikut ter-commit jika tidak ada perubahan
+              rm danda_pif/PIF.apk
               echo "SKIP_PROCESS=true" >> $GITHUB_ENV
               exit 0
             fi
@@ -56,8 +57,8 @@ jobs:
           echo "Mengunduh dan menjalankan Apktool..."
           sudo apt-get update && sudo apt-get install -y apktool
           
-          # Decompile APK ke folder temp_decoded
-          apktool d PIF.apk -o temp_decoded -f
+          # Decompile APK yang ada di folder danda_pif
+          apktool d danda_pif/PIF.apk -o temp_decoded -f
           
           echo "Memproses data array menjadi keybox.xml dan pif.prop di folder danda_pif/..."
           
@@ -67,12 +68,12 @@ jobs:
           # mv hasil_keybox.xml danda_pif/keybox.xml
           # mv hasil_pif.prop danda_pif/pif.prop
           
-          # Bersihkan folder mentah temp
-          rm -rf temp_decoded PIF.apk
+          # Bersihkan folder mentah temp (PIF.apk tetap dibiarkan di danda_pif/)
+          rm -rf temp_decoded
 
       - name: Commit and Push Changes to danda_pif/
         if: env.SKIP_PROCESS != 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update keybox.xml, pif.prop, and MD5 in /danda_pif/ [skip ci]"
+          commit_message: "Auto-update PIF.apk, keybox.xml, pif.prop, and MD5 in /danda_pif/ [skip ci]"
           file_pattern: 'danda_pif/*'
