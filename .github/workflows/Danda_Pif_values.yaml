@@ -56,11 +56,16 @@ jobs:
         if: env.SKIP_PROCESS != 'true'
         run: |
           echo "Menyiapkan Apktool resmi..."
-          # Download apktool.jar versi stabil langsung dari repository rilis iBotPeaches
           sudo curl -L -o /usr/local/bin/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar
           
-          echo "Memastikan Python3 tersedia..."
-          sudo apt-get update && sudo apt-get install -y python3
+          echo "Memeriksa ketersediaan Python3..."
+          if ! command -v python3 &> /dev/null; then
+              echo "Python3 tidak ditemukan. Menjalankan fallback instalasi..."
+              sudo apt-get update && sudo apt-get install -y python3
+          else
+              echo "Python3 sudah tersedia:"
+              python3 --version
+          fi
 
 
       - name: Decompile APK & Extract Resources
