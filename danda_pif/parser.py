@@ -30,7 +30,7 @@ def parse_arrays():
                     val = val[1:-1]
                 props_items.append(val)
 
-    # Karena parser.py di dalam folder dandapif, output langsung disimpan ke direktori saat ini
+    # Karena parser.py berada di dalam folder danda_pif, output langsung disimpan ke direktori saat ini (.)
     output_dir = "."
 
     # 1. Generate keybox.xml
@@ -45,7 +45,7 @@ def parse_arrays():
         
         with open(os.path.join(output_dir, "keybox.xml"), "w") as f:
             f.write(keybox_content)
-        print("Berhasil membuat dandapif/keybox.xml")
+        print("Berhasil membuat danda_pif/keybox.xml")
 
     # 2. Generate pif.prop
     if props_items:
@@ -64,7 +64,7 @@ def parse_arrays():
                 
         with open(os.path.join(output_dir, "pif.prop"), "w") as f:
             f.write(prop_content)
-        print("Berhasil membuat dandapif/pif.prop")
+        print("Berhasil membuat danda_pif/pif.prop")
 
 if __name__ == "__main__":
     parse_arrays()
