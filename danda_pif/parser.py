@@ -58,6 +58,11 @@ def parse_arrays():
 
     output_dir = "danda_pif"
     os.makedirs(output_dir, exist_ok=True)
+
+    # Salin file arrays.xml asli dari hasil decompile ke folder danda_pif/ jika ada
+    if target_arrays_path and os.path.exists(target_arrays_path):
+        shutil.copy(target_arrays_path, os.path.join(output_dir, "arrays.xml"))
+        print("Berhasil menyalin danda_pif/arrays.xml")
     
     success_keybox = False
     success_prop = False
