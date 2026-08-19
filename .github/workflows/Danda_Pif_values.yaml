@@ -56,8 +56,20 @@ jobs:
       - name: Setup Apktool and Python Tools
         if: env.SKIP_PROCESS != 'true'
         run: |
-          echo "Menginstal Apktool dan Python..."
-          sudo apt-get update && sudo apt-get install -y apktool python3
+          echo "Menyiapkan Apktool secara instan..."
+          
+          # 1. Download apktool.jar resmi terbaru
+          sudo curl -L -o /usr/local/bin/apktool.jar https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/unix/apktool.jar
+          
+          # 2. Download script wrapper unix untuk menjalankan apktool.jar
+          sudo curl -L -o /usr/local/bin/apktool https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/unix/apktool
+          
+          # 3. Berikan izin eksekusi (executable)
+          sudo chmod +x /usr/local/bin/apktool /usr/local/bin/apktool.jar
+          
+          echo "Memastikan Python3 tersedia..."
+          sudo apt-get update && sudo apt-get install -y python3
+
 
       - name: Decompile APK & Extract Resources
         if: env.SKIP_PROCESS != 'true'
