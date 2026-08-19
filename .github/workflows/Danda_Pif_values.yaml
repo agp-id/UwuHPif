@@ -56,11 +56,13 @@ jobs:
       - name: Setup Apktool and Python Tools
         if: env.SKIP_PROCESS != 'true'
         run: |
-          echo "Menyiapkan Apktool secara instan..."
-          sudo curl -L -o /usr/local/bin/apktool.jar https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/unix/apktool.jar
+          echo "Menyiapkan Apktool resmi..."
+          # Download apktool.jar versi stabil langsung dari repository rilis iBotPeaches
+          sudo curl -L -o /usr/local/bin/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar
           
           echo "Memastikan Python3 tersedia..."
           sudo apt-get update && sudo apt-get install -y python3
+
 
       - name: Decompile APK & Extract Resources
         if: env.SKIP_PROCESS != 'true'
