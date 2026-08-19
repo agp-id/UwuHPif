@@ -2,6 +2,12 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
+def clean_pem_text(text):
+    # Membersihkan spasi berlebih di setiap baris dan menyusunnya kembali
+    lines = text.splitlines()
+    cleaned_lines = [line.strip() for line in lines if line.strip()]
+    return "\n".join(cleaned_lines)
+
 def parse_arrays():
     base_dir = "temp_decoded"
     
@@ -29,11 +35,13 @@ def parse_arrays():
                 name = child.get('name')
                 if name == 'keybox':
                     for item in child.findall('item'):
-                        val = item.text.strip() if item.text else ""
+                        val = item.text if item.text else ""
                         if val.startswith('"') and val.endswith('"'):
                             val = val[1:-1]
                         val = val.replace('\\n', '\n')
-                        keybox_items.append(val)
+                        cleaned_val = clean_pem_text(val)
+                        if cleaned_val:
+                            keybox_items.append(cleaned_val)
                 elif name == 'device_props' or name == 'full_device_props':
                     for item in child.findall('item'):
                         val = item.text.strip() if item.text else ""
@@ -43,27 +51,32 @@ def parse_arrays():
         except Exception as e:
             print(f"Peringatan: Gagal memparsing {xml_path}: {e}")
 
-    # Simpan hasil output ke dalam folder danda_pif/
     output_dir = "danda_pif"
     os.makedirs(output_dir, exist_ok=True)
     
     success_keybox = False
     success_prop = False
 
-    # 1. Generate keybox.xml
+    # 1. Generate keybox.xml dengan format rapi dan valid
     if keybox_items:
-        keybox_content = '<?xml lang="en"?>\n<Keybox>\n'
-        for i, cert in enumerate(keybox_items):
-            if i == 0:
-                keybox_content += f"    <Key>\n{cert}\n    </Key>\n"
-            else:
-                keybox_content += f"    <Certificate>\n{cert}\n    </Certificate>\n"
+        keybox_content = '<?xml version="1.0" encoding="utf-8"?>\n<Keybox>\n'
+        
+        # Item pertama adalah Private Key
+        if len(keybox_items) > 0:
+            keybox_content += f"    <Key>\n{keybox_items[0]}\n    </Key>\n"
+        
+        # Sisa item berikutnya dibungkus dalam <CertificateChain>
+        keybox_content += "    <CertificateChain>\n"
+        for cert in keybox_items[1:]:
+            keybox_content += f"        <Certificate>\n{cert}\n        </Certificate>\n"
+        keybox_content += "    </CertificateChain>\n"
+        
         keybox_content += '</Keybox>'
         
         with open(os.path.join(output_dir, "keybox.xml"), "w") as f:
             f.write(keybox_content)
         success_keybox = True
-        print("Berhasil membuat danda_pif/keybox.xml")
+        print("Berhasil membuat danda_pif/keybox.xml dengan format valid dan rapi")
 
     # 2. Generate pif.prop
     if props_items:
@@ -85,7 +98,6 @@ def parse_arrays():
         success_prop = True
         print("Berhasil membuat danda_pif/pif.prop")
 
-    # Sinyal keluar (Exit code) untuk GitHub Actions
     if success_keybox and success_prop:
         sys.exit(0)
     else:
