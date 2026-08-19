@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import os
 import sys
+import shutil
 
 def clean_pem_text(text):
     lines = text.splitlines()
