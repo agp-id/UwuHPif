@@ -15,6 +15,9 @@ def detect_key_type(pem_content):
         return "rsa"
     return None
 
+def is_certificate(pem_content):
+    return "BEGIN CERTIFICATE" in pem_content
+
 def parse_arrays():
     base_dir = "temp_decoded"
     
@@ -31,9 +34,9 @@ def parse_arrays():
 
     keybox_items = []
     props_items = []
+    target_arrays_path = None
 
     for xml_path in xml_files:
-        # Cari file asli arrays.xml dari hasil decompile untuk disalin nanti
         if os.path.basename(xml_path) == "arrays.xml":
             target_arrays_path = xml_path
             
@@ -64,7 +67,6 @@ def parse_arrays():
     output_dir = "danda_pif"
     os.makedirs(output_dir, exist_ok=True)
 
-    # Salin file arrays.xml asli dari hasil decompile ke folder danda_pif/ jika ada
     if target_arrays_path and os.path.exists(target_arrays_path):
         shutil.copy(target_arrays_path, os.path.join(output_dir, "arrays.xml"))
         print("Berhasil menyalin danda_pif/arrays.xml")
@@ -76,30 +78,49 @@ def parse_arrays():
     if keybox_items:
         keybox_content = '<?xml version="1.0" encoding="utf-8"?>\n<Keybox>\n'
         
-        # Group items by key type
+        # Group items by key type with proper tracking
         ec_private = None
         ec_certs = []
         rsa_private = None
         rsa_certs = []
         
+        # Status tracking untuk tahu posisi
+        current_key_type = None  # 'ecdsa' or 'rsa'
+        
         for item in keybox_items:
             key_type = detect_key_type(item)
+            is_cert = is_certificate(item)
+            
             if key_type == "ecdsa":
+                current_key_type = "ecdsa"
                 if ec_private is None:
                     ec_private = item
                 else:
                     ec_certs.append(item)
             elif key_type == "rsa":
+                current_key_type = "rsa"
                 if rsa_private is None:
                     rsa_private = item
                 else:
                     rsa_certs.append(item)
-            else:
-                # Jika tidak terdeteksi, anggap sebagai certificate
-                if ec_private is not None:
+            elif is_cert:
+                # Certificate: masukkan ke key yang sedang aktif
+                if current_key_type == "ecdsa" or (ec_private is not None and rsa_private is None):
                     ec_certs.append(item)
-                elif rsa_private is not None:
+                elif current_key_type == "rsa" or (rsa_private is not None and ec_private is None):
                     rsa_certs.append(item)
+                else:
+                    # Jika belum tahu, cek posisi RSA Private Key
+                    if rsa_private is not None:
+                        rsa_certs.append(item)
+                    else:
+                        ec_certs.append(item)
+            else:
+                # Fallback: jika tidak terdeteksi
+                if rsa_private is not None and not ec_certs:
+                    rsa_certs.append(item)
+                else:
+                    ec_certs.append(item)
         
         # Write EC Key
         if ec_private is not None:
@@ -156,7 +177,6 @@ def parse_arrays():
             if i < len(prop_keys):
                 prop_content += f"{prop_keys[i]}={val}\n"
         
-        # Tambahkan spoofVendingSdk default
         prop_content += "spoofVendingSdk=false\n"
                 
         with open(os.path.join(output_dir, "pif.prop"), "w") as f:
@@ -169,6 +189,7 @@ def parse_arrays():
         print(f"Output folder: {output_dir}/")
         print("  - keybox.xml (untuk attestation)")
         print("  - pif.prop (untuk PIF properties)")
+        print("  - arrays.xml (original dari APK)")
         sys.exit(0)
     else:
         if not success_keybox:
