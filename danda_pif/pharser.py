@@ -30,9 +30,8 @@ def parse_arrays():
                     val = val[1:-1]
                 props_items.append(val)
 
-    # Direktori output disesuaikan ke folder dandapif
-    output_dir = "dandapif"
-    os.makedirs(output_dir, exist_ok=True)
+    # Karena parser.py di dalam folder dandapif, output langsung disimpan ke direktori saat ini
+    output_dir = "."
 
     # 1. Generate keybox.xml
     if keybox_items:
