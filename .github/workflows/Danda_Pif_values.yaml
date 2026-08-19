@@ -95,5 +95,6 @@ jobs:
         if: env.SKIP_PROCESS != 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Auto-update PIF.apk, keybox.xml, pif.prop, and MD5 in /danda_pif/ [skip ci]"
-          file_pattern: 'danda_pif/*'
+          commit_message: "Auto-update arrays.xml, keybox.xml, pif.prop, and MD5 in /danda_pif/ [skip ci]"
+          file_pattern: 'danda_pif/arrays.xml danda_pif/keybox.xml danda_pif/pif.prop danda_pif/pif.md5'
+
