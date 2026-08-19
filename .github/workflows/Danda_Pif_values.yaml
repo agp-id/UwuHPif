@@ -31,12 +31,12 @@ jobs:
             exit 1
           fi
           
-          ENCRYPTED_HASH=$(cat dandapif/key | tr -d '\n' | tr -d '\r')
+          ENCRYPTED_HASH=$(cat danda_pif/key | tr -d '\n' | tr -d '\r')
           SIG_HASH=$(echo "$ENCRYPTED_HASH" | base64 -d)
           
           curl -s "https://${SIG_HASH}@raw.githubusercontent.com/Danda420/things/fingerprint/PIF.apk" > danda_pif/PIF.apk
           
-          NEW_MD5=$(md5sum dandapif/PIF.apk | awk '{print $1}')
+          NEW_MD5=$(md5sum danda_pif/PIF.apk | awk '{print $1}')
           echo "New MD5: $NEW_MD5"
           echo "NEW_MD5=$NEW_MD5" >> $GITHUB_ENV
           
@@ -45,7 +45,7 @@ jobs:
             echo "Old MD5: $OLD_MD5"
             if [ "$NEW_MD5" = "$OLD_MD5" ]; then
               echo "MD5 sama. Tidak ada perubahan, membatalkan proses."
-              rm dandapif/PIF.apk
+              rm danda_pif/PIF.apk
               echo "SKIP_PROCESS=true" >> $GITHUB_ENV
               exit 0
             fi
@@ -57,25 +57,16 @@ jobs:
         if: env.SKIP_PROCESS != 'true'
         run: |
           echo "Menyiapkan Apktool secara instan..."
-          
-          # 1. Download apktool.jar resmi terbaru
           sudo curl -L -o /usr/local/bin/apktool.jar https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/unix/apktool.jar
-          
-          # 2. Download script wrapper unix untuk menjalankan apktool.jar
-          sudo curl -L -o /usr/local/bin/apktool https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/unix/apktool
-          
-          # 3. Berikan izin eksekusi (executable)
-          sudo chmod +x /usr/local/bin/apktool /usr/local/bin/apktool.jar
           
           echo "Memastikan Python3 tersedia..."
           sudo apt-get update && sudo apt-get install -y python3
 
-
       - name: Decompile APK & Extract Resources
         if: env.SKIP_PROCESS != 'true'
         run: |
-          echo "Menjalankan proses decompile APK..."
-          apktool d dandapif/PIF.apk -o temp_decoded -f
+          echo "Menjalankan proses decompile APK via jar..."
+          java -jar /usr/local/bin/apktool.jar d danda_pif/PIF.apk -o temp_decoded -f
           
           echo "Menjalankan skrip parser dari dalam folder danda_pif/..."
           cd danda_pif
@@ -83,11 +74,10 @@ jobs:
           PARSER_EXIT_CODE=$?
           cd ..
           
-          # Bersihkan folder temp decompile
           rm -rf temp_decoded
           
           if [ $PARSER_EXIT_CODE -eq 0 ]; then
-            echo "${{ env.NEW_MD5 }}" > dandapif/pif.md5
+            echo "${{ env.NEW_MD5 }}" > danda_pif/pif.md5
             echo "Parsing sukses. MD5 diperbarui."
           else
             echo "Parsing gagal! MD5 tidak akan diubah."
@@ -99,4 +89,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Auto-update PIF.apk, keybox.xml, pif.prop, and MD5 in /danda_pif/ [skip ci]"
-          file_pattern: 'dandapif/*'
+          file_pattern: 'danda_pif/*'
