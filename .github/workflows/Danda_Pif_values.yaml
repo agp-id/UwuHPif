@@ -1,5 +1,4 @@
 name: Get Danda's PIF APK Resource
-
 on:
   workflow_dispatch:
   schedule:
@@ -70,12 +69,12 @@ jobs:
           echo "Menjalankan proses decompile APK via jar..."
           java -jar /usr/local/bin/apktool.jar d danda_pif/PIF.apk -o temp_decoded -f
           
-          echo "Menjalankan skrip parser dari dalam folder danda_pif/..."
-          cd danda_pif
-          python3 parser.py
+          echo "Menjalankan skrip parser..."
+          # Jalankan skrip python langsung dari root, arahkan ke folder danda_pif/parser.py
+          python3 danda_pif/parser.py
           PARSER_EXIT_CODE=$?
-          cd ..
           
+          # Bersihkan folder temp decompile
           rm -rf temp_decoded
           
           if [ $PARSER_EXIT_CODE -eq 0 ]; then
@@ -85,6 +84,7 @@ jobs:
             echo "Parsing gagal! MD5 tidak akan diubah."
             exit 1
           fi
+
 
       - name: Commit and Push Changes to dandapif/
         if: env.SKIP_PROCESS != 'true'
