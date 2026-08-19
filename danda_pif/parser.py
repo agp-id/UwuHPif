@@ -2,21 +2,6 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
-def list_decoded_contents(base_dir="temp_decoded"):
-    print("=== STRUKTUR FOLDER & FILE HASIL DECOMPILE ===")
-    if not os.path.exists(base_dir):
-        print(f"Direktori {base_dir} tidak ditemukan!")
-        return
-
-    for root, dirs, files in os.walk(base_dir):
-        level = root.replace(base_dir, '').count(os.sep)
-        indent = ' ' * 4 * level
-        print(f"{indent}{os.path.basename(root)}/")
-        sub_indent = ' ' * 4 * (level + 1)
-        for f in files:
-            print(f"{sub_indent}{f}")
-    print("=============================================")
-
 def parse_arrays():
     base_dir = "temp_decoded"
     
@@ -24,16 +9,13 @@ def parse_arrays():
         print(f"Error: Direktori {base_dir} tidak ditemukan!")
         sys.exit(1)
 
-    # Cetak semua isi folder dan file hasil decompile agar bisa dilihat di log
-    list_decoded_contents(base_dir)
-
     values_dir = os.path.join(base_dir, "res", "values")
     if not os.path.exists(values_dir):
         print(f"Error: Direktori {values_dir} tidak ditemukan!")
         sys.exit(1)
 
+    # Ambil semua file XML di dalam folder res/values
     xml_files = [os.path.join(values_dir, f) for f in os.listdir(values_dir) if f.endswith('.xml')]
-    print(f"File XML di dalam res/values/: {os.listdir(values_dir)}")
 
     keybox_items = []
     props_items = []
@@ -61,7 +43,10 @@ def parse_arrays():
         except Exception as e:
             print(f"Peringatan: Gagal memparsing {xml_path}: {e}")
 
-    output_dir = "."
+    # Simpan hasil output ke dalam folder danda_pif/
+    output_dir = "danda_pif"
+    os.makedirs(output_dir, exist_ok=True)
+    
     success_keybox = False
     success_prop = False
 
@@ -100,6 +85,7 @@ def parse_arrays():
         success_prop = True
         print("Berhasil membuat danda_pif/pif.prop")
 
+    # Sinyal keluar (Exit code) untuk GitHub Actions
     if success_keybox and success_prop:
         sys.exit(0)
     else:
