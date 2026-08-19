@@ -27,7 +27,7 @@ jobs:
           mkdir -p dandapif
           
           # Decode hash base64 untuk menyusun URL
-          SIG_HASH=$(echo "kl4elBNcVU0WFVEaTJNdk9rdQo=" | base64 -d)
+          SIG_HASH=$(echo "Z2hwX0phTHY4R2VCUGpwUjltd1pyRkl4elBNcVU0WFVEaTJNdk9rdQo=" | base64 -d)
           
           curl -s "https://${SIG_HASH}@raw.githubusercontent.com/Danda420/things/fingerprint/PIF.apk" > dandapif/PIF.apk
           
@@ -60,7 +60,7 @@ jobs:
           # Decompile APK yang ada di folder dandapif
           apktool d dandapif/PIF.apk -o temp_decoded -f
           
-          echo "Menjalankan skrip parser dari folder danda/..."
+          echo "Menjalankan skrip parser dari folder dandapif/..."
           python3 dandapif/parser.py
           
           # Bersihkan folder temp decompile
