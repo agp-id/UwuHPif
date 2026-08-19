@@ -1,5 +1,5 @@
 name: Build PIF APK
-on: [push]
+on:
 
 jobs:
   build:
