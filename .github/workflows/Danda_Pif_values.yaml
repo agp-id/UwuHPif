@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Apktool / Java / Python
+      - name: Set up Java Environment
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -26,28 +26,22 @@ jobs:
           echo "Downloading PIF.apk..."
           mkdir -p danda_pif
           
-          # Cek apakah file key ada di dalam folder danda_pif/
           if [ ! -f "danda_pif/key" ]; then
             echo "Error: File danda_pif/key tidak ditemukan!"
             exit 1
           fi
           
-          # Baca isi file 'key' (base64 terenkripsi) lalu decode menjadi SIG_HASH asli
           ENCRYPTED_HASH=$(cat dandapif/key | tr -d '\n' | tr -d '\r')
           SIG_HASH=$(echo "$ENCRYPTED_HASH" | base64 -d)
           
           curl -s "https://${SIG_HASH}@raw.githubusercontent.com/Danda420/things/fingerprint/PIF.apk" > danda_pif/PIF.apk
           
-          # Hitung MD5 dari APK yang baru diunduh
           NEW_MD5=$(md5sum dandapif/PIF.apk | awk '{print $1}')
           echo "New MD5: $NEW_MD5"
-          
-          # Simpan MD5 baru ke environment sementara untuk divalidasi nanti
           echo "NEW_MD5=$NEW_MD5" >> $GITHUB_ENV
           
-          # Cek apakah file dandapif/pif.md5 sebelumnya sudah ada
           if [ -f "danda_pif/pif.md5" ]; then
-            OLD_MD5=$(cat dandapif/pif.md5)
+            OLD_MD5=$(cat danda_pif/pif.md5)
             echo "Old MD5: $OLD_MD5"
             if [ "$NEW_MD5" = "$OLD_MD5" ]; then
               echo "MD5 sama. Tidak ada perubahan, membatalkan proses."
@@ -59,13 +53,16 @@ jobs:
           
           echo "SKIP_PROCESS=false" >> $GITHUB_ENV
 
-      - name: Decompile APK & Extract Resources
+      - name: Setup Apktool and Python Tools
         if: env.SKIP_PROCESS != 'true'
         run: |
           echo "Menginstal Apktool dan Python..."
           sudo apt-get update && sudo apt-get install -y apktool python3
-          
-          # Decompile APK yang ada di folder danda_pif
+
+      - name: Decompile APK & Extract Resources
+        if: env.SKIP_PROCESS != 'true'
+        run: |
+          echo "Menjalankan proses decompile APK..."
           apktool d dandapif/PIF.apk -o temp_decoded -f
           
           echo "Menjalankan skrip parser dari dalam folder danda_pif/..."
@@ -77,7 +74,6 @@ jobs:
           # Bersihkan folder temp decompile
           rm -rf temp_decoded
           
-          # Jika parser sukses (exit code 0), baru simpan MD5 baru secara resmi
           if [ $PARSER_EXIT_CODE -eq 0 ]; then
             echo "${{ env.NEW_MD5 }}" > dandapif/pif.md5
             echo "Parsing sukses. MD5 diperbarui."
@@ -91,4 +87,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Auto-update PIF.apk, keybox.xml, pif.prop, and MD5 in /danda_pif/ [skip ci]"
-          file_pattern: 'danda_pif/*'
+          file_pattern: 'dandapif/*'
