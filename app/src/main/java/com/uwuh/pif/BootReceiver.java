@@ -41,7 +41,6 @@ public class BootReceiver extends BroadcastReceiver {
             new Thread(() -> {
                 createDirectories();
                 applyFallback(context);
-
                 if (isAuto) {
                     checkUpdateOnline(context, sp);
                 }
@@ -55,22 +54,18 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     private void applyFallback(Context context) {
-        // Keybox
         if (!new File(KB_PATH).exists()) {
             String data = readRaw(context, R.raw.default_keybox);
             if (!data.isEmpty()) write(KB_PATH, data);
         }
-        // PIF
         if (!new File(PIF_PATH).exists()) {
             String data = readRaw(context, R.raw.default_pif);
             if (!data.isEmpty()) write(PIF_PATH, data);
         }
-        // GameProps
         if (!new File(GAMEPROPS_PATH).exists()) {
             String data = readRaw(context, R.raw.default_gameprops);
             if (!data.isEmpty()) write(GAMEPROPS_PATH, data);
         }
-        // Thermals
         if (!new File(THERMALS_PATH).exists()) {
             String data = readRaw(context, R.raw.default_thermals);
             if (!data.isEmpty()) write(THERMALS_PATH, data);
@@ -115,7 +110,6 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     // ==================== UTILITY METHODS ====================
-
     private String fetch(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection c = (HttpURLConnection) url.openConnection();
