@@ -9,56 +9,120 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Title -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="PIF Manager"
-            android:textSize="20sp"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- ==================== TOGGLES ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Konfigurasi"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- Toggle 1: Enable Bootloader -->
+        <Switch
+            android:id="@+id/switchBootloader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Enable Bootloader Spoof"
+            android:textSize="14sp" />
+
+        <!-- Toggle 2: Enable PIF -->
+        <Switch
+            android:id="@+id/switchPIF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Enable PIF Spoof"
+            android:textSize="14sp" />
+
+        <!-- Toggle 3: Spoof Provider (force custom) -->
+        <Switch
+            android:id="@+id/switchProvider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Force Custom Provider"
+            android:textSize="14sp" />
+
+        <!-- ==================== GAMEPROPS & THERMALS ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Additional Files"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnLoadGameProps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Load GameProps JSON" />
+
+        <Button
+            android:id="@+id/btnLoadThermals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Load Thermal JSON" />
+
+        <!-- ==================== AUTO MODE ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Mode Auto"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <Switch
             android:id="@+id/switchAuto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Update Otomatis saat Boot"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Status: Mode Auto Aktif"
-            android:textColor="#555555" />
+            android:text="Update Otomatis saat Boot"
+            android:textSize="14sp" />
 
         <TextView
-            android:id="@+id/tvLastCheck"
+            android:id="@+id/tvLastUpdate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Terakhir update: -"
-            android:textSize="12sp" />
+            android:text="Last update: -"
+            android:textSize="12sp"
+            android:textColor="#555555" />
 
-        <View
+        <Button
+            android:id="@+id/btnUpdate"
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
-            android:background="#CCCCCC" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="UPDATE" />
 
-        <!-- Panel Manual (Hanya Muncul Jika Switch Auto Mati) -->
+        <!-- ==================== MANUAL MODE ==================== -->
         <LinearLayout
             android:id="@+id/panelManual"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:layout_marginTop="8dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Opsi Manual:"
+                android:text="Mode Manual"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <Button
@@ -66,22 +130,63 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Pilih File Keybox (.xml)" />
+                android:text="Pilih Keybox (.xml)" />
 
             <Button
-                android:id="@+id/btnPickProps"
+                android:id="@+id/btnPickPIF"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Pilih File Props (.json)" />
+                android:text="Pilih PIF (.prop / .json)" />
+
+            <!-- Editor untuk cust_pif.prop -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Custom PIF Editor"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/etPifEditor"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="4dp"
+                android:background="#F5F5F5"
+                android:gravity="top|start"
+                android:padding="8dp"
+                android:textSize="12sp"
+                android:typeface="monospace" />
+
+            <Button
+                android:id="@+id/btnApplyManual"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="APPLY"
+                android:backgroundTint="#4CAF50" />
+
         </LinearLayout>
 
+        <!-- ==================== RESET ==================== -->
         <Button
-            android:id="@+id/btnCheckUpdate"
+            android:id="@+id/btnResetPersist"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Cek Update Sekarang" />
+            android:text="Reset Persist Properties"
+            android:backgroundTint="#FF5722" />
+
+        <!-- ==================== STATUS ==================== -->
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Ready"
+            android:textSize="12sp"
+            android:textColor="#555555" />
 
     </LinearLayout>
 </ScrollView>
