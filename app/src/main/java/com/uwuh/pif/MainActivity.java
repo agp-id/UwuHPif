@@ -2,6 +2,8 @@ package com.uwuh.pif;
 
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -59,18 +61,18 @@ public class MainActivity extends Activity {
     // ==================== LOG VIEWER ====================
     private static final int MAX_LOG_LINES = 10;
     private LinkedList<String> logLines = new LinkedList<>();
-    private TextView tvLog;
+    private TextView tvLog, tvLogTitle;
     private ScrollView logScrollView;
-    private TextView tvLogTitle;
+    private Button btnCopyLog;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
     private boolean isDebugMode = false;
 
     private SharedPreferences sp;
-    private Switch switchAuto, switchBootloader, switchPIF, switchProvider, switchDebug;
-    private TextView tvStatus, tvLastUpdate;
+    private Switch switchManual, switchBootloader, switchPIF, switchProvider, switchDebug;
+    private TextView tvStatus, tvLastUpdate, tvAutoStatus;
     private LinearLayout panelManual;
-    private EditText etPifEditor;
-    private Button btnUpdate, btnApplyManual;
+    private EditText etPifEditor, etGameProps, etThermals;
+    private Button btnUpdate, btnApplyManual, btnGameProps, btnThermals;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,43 +82,55 @@ public class MainActivity extends Activity {
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
         // Init views
-        switchAuto = findViewById(R.id.switchAuto);
+        switchManual = findViewById(R.id.switchManual);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
         switchProvider = findViewById(R.id.switchProvider);
-        switchDebug = findViewById(R.id.switchDebug);  // ← SEKARANG DI BAWAH
+        switchDebug = findViewById(R.id.switchDebug);
         tvStatus = findViewById(R.id.tvStatus);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
+        tvAutoStatus = findViewById(R.id.tvAutoStatus);
         panelManual = findViewById(R.id.panelManual);
         etPifEditor = findViewById(R.id.etPifEditor);
+        etGameProps = findViewById(R.id.etGameProps);
+        etThermals = findViewById(R.id.etThermals);
         btnUpdate = findViewById(R.id.btnUpdate);
         btnApplyManual = findViewById(R.id.btnApplyManual);
+        btnGameProps = findViewById(R.id.btnGameProps);
+        btnThermals = findViewById(R.id.btnThermals);
 
         // Log viewer
         tvLog = findViewById(R.id.tvLog);
         tvLogTitle = findViewById(R.id.tvLogTitle);
         logScrollView = findViewById(R.id.logScrollView);
+        btnCopyLog = findViewById(R.id.btnCopyLog);
 
-        boolean isAuto = sp.getBoolean("auto", true);
-        switchAuto.setChecked(isAuto);
-        updateUIState(isAuto);
+        // Load states
+        boolean isManual = sp.getBoolean("manual", false);
+        switchManual.setChecked(isManual);
+        updateUIState(isManual);
 
         // Load persist states
         switchBootloader.setChecked(SystemPropertiesHelper.getBoolean(PROP_BOOTLOADER, true));
         switchPIF.setChecked(SystemPropertiesHelper.getBoolean(PROP_PIF, true));
         switchProvider.setChecked(SystemPropertiesHelper.getBoolean(PROP_USE_CUSTOM, false));
         
-        // Debug mode (sekarang di bawah)
+        // Debug mode
         isDebugMode = SystemPropertiesHelper.getBoolean(PROP_DEBUG, false);
         switchDebug.setChecked(isDebugMode);
         updateDebugUI(isDebugMode);
 
+        // Load editors
+        loadGameProps();
+        loadThermals();
+        loadCustomPIF();
+
         // ==================== SWITCH LISTENERS ====================
         
-        switchAuto.setOnCheckedChangeListener((v, checked) -> {
-            sp.edit().putBoolean("auto", checked).apply();
+        switchManual.setOnCheckedChangeListener((v, checked) -> {
+            sp.edit().putBoolean("manual", checked).apply();
             updateUIState(checked);
-            addLog("Auto mode: " + (checked ? "ON" : "OFF"));
+            addLog("Manual mode: " + (checked ? "ON" : "OFF"));
         });
 
         switchBootloader.setOnCheckedChangeListener((v, checked) -> {
@@ -138,7 +152,6 @@ public class MainActivity extends Activity {
             if (checked) forceReloadPIF();
         });
 
-        // ==================== SWITCH DEBUG (PALING BAWAH) ====================
         switchDebug.setOnCheckedChangeListener((v, checked) -> {
             SystemPropertiesHelper.set(PROP_DEBUG, checked ? "true" : "false");
             isDebugMode = checked;
@@ -154,15 +167,10 @@ public class MainActivity extends Activity {
             checkUpdateOnline(true);
         }).start());
 
-        findViewById(R.id.btnLoadGameProps).setOnClickListener(v -> {
-            addLog("Loading GameProps...");
-            pickFile(201);
-        });
-        
-        findViewById(R.id.btnLoadThermals).setOnClickListener(v -> {
-            addLog("Loading Thermals...");
-            pickFile(202);
-        });
+        btnCopyLog.setOnClickListener(v -> copyLog());
+
+        btnGameProps.setOnClickListener(v -> toggleGameProps());
+        btnThermals.setOnClickListener(v -> toggleThermals());
         
         findViewById(R.id.btnPickKeybox).setOnClickListener(v -> {
             addLog("Picking Keybox...");
@@ -184,17 +192,79 @@ public class MainActivity extends Activity {
             resetPersistProps();
         });
 
-        loadCustomPIF();
-
+        // ==================== INITIAL BACKGROUND ====================
         new Thread(() -> {
             createDirectories();
             applyFallback();
             addLog("Fallback applied");
-            if (sp.getBoolean("auto", true)) {
+            if (!sp.getBoolean("manual", false)) {
                 addLog("Auto update checking...");
                 checkUpdateOnline(false);
             }
         }).start();
+    }
+
+    // ==================== EDITOR TOGGLES ====================
+
+    private boolean gamePropsVisible = false;
+    private boolean thermalsVisible = false;
+
+    private void toggleGameProps() {
+        gamePropsVisible = !gamePropsVisible;
+        etGameProps.setVisibility(gamePropsVisible ? View.VISIBLE : View.GONE);
+        btnGameProps.setText(gamePropsVisible ? "Save GameProps" : "Edit GameProps");
+        if (gamePropsVisible) {
+            loadGameProps();
+        } else {
+            saveGameProps();
+        }
+    }
+
+    private void toggleThermals() {
+        thermalsVisible = !thermalsVisible;
+        etThermals.setVisibility(thermalsVisible ? View.VISIBLE : View.GONE);
+        btnThermals.setText(thermalsVisible ? "Save Thermals" : "Edit Thermals");
+        if (thermalsVisible) {
+            loadThermals();
+        } else {
+            saveThermals();
+        }
+    }
+
+    private void loadGameProps() {
+        String content = readFile(GAMEPROPS_PATH);
+        if (content != null && !content.isEmpty()) {
+            etGameProps.setText(content);
+        } else {
+            etGameProps.setText("{\n    \"device1\": {\n        \"PKGNAMES\": [],\n        \"MANUFACTURER\": \"\",\n        \"MODEL\": \"\"\n    }\n}");
+        }
+    }
+
+    private void saveGameProps() {
+        String content = etGameProps.getText().toString().trim();
+        if (!content.isEmpty()) {
+            write(GAMEPROPS_PATH, content);
+            addLog("GameProps saved");
+            Toast.makeText(this, "GameProps saved", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void loadThermals() {
+        String content = readFile(THERMALS_PATH);
+        if (content != null && !content.isEmpty()) {
+            etThermals.setText(content);
+        } else {
+            etThermals.setText("{\n    \"DEFAULT\": \"0\",\n    \"1\": {\n        \"PKGNAMES\": [],\n        \"THERMAL_PROFILE\": \"\"\n    }\n}");
+        }
+    }
+
+    private void saveThermals() {
+        String content = etThermals.getText().toString().trim();
+        if (!content.isEmpty()) {
+            write(THERMALS_PATH, content);
+            addLog("Thermals saved");
+            Toast.makeText(this, "Thermals saved", Toast.LENGTH_SHORT).show();
+        }
     }
 
     // ==================== LOG VIEWER METHODS ====================
@@ -220,10 +290,22 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void copyLog() {
+        String logText = tvLog.getText().toString();
+        if (logText != null && !logText.isEmpty() && !logText.equals("[Log ready]") && !logText.equals("[Log disabled]")) {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Debug Log", logText);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "Log copied to clipboard", Toast.LENGTH_SHORT).show();
+            addLog("Log copied to clipboard");
+        }
+    }
+
     private void updateDebugUI(boolean enabled) {
         int visibility = enabled ? View.VISIBLE : View.GONE;
         tvLogTitle.setVisibility(visibility);
         logScrollView.setVisibility(visibility);
+        btnCopyLog.setVisibility(visibility);
         if (enabled) {
             addLog("Debug mode enabled");
         } else {
@@ -234,13 +316,14 @@ public class MainActivity extends Activity {
 
     // ==================== UI HELPERS ====================
 
-    private void updateUIState(boolean isAuto) {
-        panelManual.setVisibility(isAuto ? View.GONE : View.VISIBLE);
-        btnUpdate.setVisibility(isAuto ? View.VISIBLE : View.GONE);
+    private void updateUIState(boolean isManual) {
+        panelManual.setVisibility(isManual ? View.VISIBLE : View.GONE);
+        btnUpdate.setVisibility(isManual ? View.GONE : View.VISIBLE);
+        tvAutoStatus.setText(isManual ? "Auto update: OFF" : "Auto update: ON");
         String lastUpdate = sp.getString("last_update", "-");
         tvLastUpdate.setText("Last update: " + lastUpdate);
-        setStatus(isAuto ? "Mode: Auto" : "Mode: Manual");
-        addLog("UI mode: " + (isAuto ? "Auto" : "Manual"));
+        setStatus(isManual ? "Mode: Manual" : "Mode: Auto");
+        addLog("UI mode: " + (isManual ? "Manual" : "Auto"));
     }
 
     private void setStatus(String msg) {
@@ -311,22 +394,22 @@ public class MainActivity extends Activity {
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
                 write(KB_PATH, newKb);
                 updated = true;
-                addLog("Keybox updated from GitHub");
+                addLog("Keybox updated from server");
             }
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
                 write(PIF_PATH, newPif);
                 updated = true;
-                addLog("PIF updated from GitHub");
+                addLog("PIF updated from server");
             }
             if (newGame != null && !newGame.isEmpty() && !newGame.equals(readFile(GAMEPROPS_PATH))) {
                 write(GAMEPROPS_PATH, newGame);
                 updated = true;
-                addLog("GameProps updated from GitHub");
+                addLog("GameProps updated from server");
             }
             if (newTherm != null && !newTherm.isEmpty() && !newTherm.equals(readFile(THERMALS_PATH))) {
                 write(THERMALS_PATH, newTherm);
                 updated = true;
-                addLog("Thermals updated from GitHub");
+                addLog("Thermals updated from server");
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
@@ -442,14 +525,6 @@ public class MainActivity extends Activity {
                     });
                     killGMSAndVending();
                     addLog("GMS & Vending killed after PIF save");
-                } else if (req == 201) {
-                    write(GAMEPROPS_PATH, content);
-                    addLog("GameProps saved");
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "GameProps saved", Toast.LENGTH_SHORT).show());
-                } else if (req == 202) {
-                    write(THERMALS_PATH, content);
-                    addLog("Thermals saved");
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Thermals saved", Toast.LENGTH_SHORT).show());
                 }
             }).start();
         }
