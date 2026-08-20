@@ -72,7 +72,6 @@ public class MainActivity extends Activity {
     private TextView tvLastUpdate, tvAutoStatus;
     private TextView tvKeyboxLastApply, tvPifLastApply;
     private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
-    private ScrollView scrollGameProps, scrollThermals;
     private EditText etPifEditor, etGameProps, etThermals;
     private Button btnUpdate, btnApplyManual, btnGameProps, btnThermals;
     private Button btnResetGameProps, btnResetThermals;
@@ -84,7 +83,7 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
-        // Init views
+        // Init views - HAPUS scrollGameProps dan scrollThermals
         switchManual = findViewById(R.id.switchManual);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
@@ -98,8 +97,6 @@ public class MainActivity extends Activity {
         panelManual = findViewById(R.id.panelManual);
         panelGamePropsBtn = findViewById(R.id.panelGamePropsBtn);
         panelThermalsBtn = findViewById(R.id.panelThermalsBtn);
-        scrollGameProps = findViewById(R.id.scrollGameProps);
-        scrollThermals = findViewById(R.id.scrollThermals);
         etPifEditor = findViewById(R.id.etPifEditor);
         etGameProps = findViewById(R.id.etGameProps);
         etThermals = findViewById(R.id.etThermals);
@@ -160,7 +157,7 @@ public class MainActivity extends Activity {
 
         switchGameProps.setOnCheckedChangeListener((v, checked) -> {
             int vis = checked ? View.VISIBLE : View.GONE;
-            scrollGameProps.setVisibility(vis);
+            etGameProps.setVisibility(vis);
             panelGamePropsBtn.setVisibility(vis);
             if (checked) {
                 loadGameProps();
@@ -170,7 +167,7 @@ public class MainActivity extends Activity {
 
         switchThermals.setOnCheckedChangeListener((v, checked) -> {
             int vis = checked ? View.VISIBLE : View.GONE;
-            scrollThermals.setVisibility(vis);
+            etThermals.setVisibility(vis);
             panelThermalsBtn.setVisibility(vis);
             if (checked) {
                 loadThermals();
@@ -298,7 +295,6 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
             addLog("GameProps: Invalid JSON");
         }
-        // Reload to update button state
         loadGameProps();
     }
 
@@ -342,7 +338,6 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
             addLog("Thermals: Invalid JSON");
         }
-        // Reload to update button state
         loadThermals();
     }
 
@@ -364,7 +359,6 @@ public class MainActivity extends Activity {
     // ==================== LOG VIEWER METHODS ====================
 
     private String removePath(String msg) {
-        // Hapus semua path dari log
         msg = msg.replaceAll("/data/[^\\s]+", "");
         msg = msg.replaceAll("/odm/[^\\s]+", "");
         msg = msg.replaceAll("/vendor/[^\\s]+", "");
