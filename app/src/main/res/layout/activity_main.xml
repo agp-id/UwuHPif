@@ -50,51 +50,37 @@
             android:text="Force Custom Provider"
             android:textSize="14sp" />
 
-        <!-- ==================== ADDITIONAL FILES ==================== -->
+        <!-- ==================== MODE ==================== -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Additional Files"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/btnLoadGameProps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Load GameProps JSON" />
-
-        <Button
-            android:id="@+id/btnLoadThermals"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Load Thermal JSON" />
-
-        <!-- ==================== AUTO MODE ==================== -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Mode Auto"
+            android:text="Mode"
             android:textSize="14sp"
             android:textStyle="bold" />
 
         <Switch
-            android:id="@+id/switchAuto"
+            android:id="@+id/switchManual"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Update Otomatis saat Boot"
+            android:text="Manual Mode"
             android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvAutoStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Auto update: ON"
+            android:textSize="12sp"
+            android:textColor="#555555" />
 
         <TextView
             android:id="@+id/tvLastUpdate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:text="Last update: -"
             android:textSize="12sp"
             android:textColor="#555555" />
@@ -118,7 +104,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Mode Manual"
+                android:text="Manual Settings"
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
@@ -153,7 +139,8 @@
                 android:gravity="top|start"
                 android:padding="8dp"
                 android:textSize="12sp"
-                android:typeface="monospace" />
+                android:typeface="monospace"
+                android:textColor="#000000" />
 
             <Button
                 android:id="@+id/btnApplyManual"
@@ -163,6 +150,64 @@
                 android:text="APPLY" />
 
         </LinearLayout>
+
+        <!-- ==================== EDITOR: GAMEPROPS ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="GameProps Editor"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/etGameProps"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="4dp"
+            android:background="#F5F5F5"
+            android:gravity="top|start"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textColor="#000000"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnGameProps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Edit GameProps" />
+
+        <!-- ==================== EDITOR: THERMALS ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Thermals Editor"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/etThermals"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="4dp"
+            android:background="#F5F5F5"
+            android:gravity="top|start"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textColor="#000000"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btnThermals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Edit Thermals" />
 
         <!-- ==================== RESET ==================== -->
         <Button
@@ -189,7 +234,7 @@
             android:layout_marginTop="16dp"
             android:background="#CCCCCC" />
 
-        <!-- ==================== DEBUG TOGGLE (PALING BAWAH) ==================== -->
+        <!-- ==================== DEBUG TOGGLE ==================== -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -207,15 +252,32 @@
             android:textSize="14sp" />
 
         <!-- ==================== LOG VIEWER ==================== -->
-        <TextView
-            android:id="@+id/tvLogTitle"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="=== Debug Log ==="
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/tvLogTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="=== Debug Log ==="
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnCopyLog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Copy"
+                android:textSize="10sp"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:visibility="gone" />
+        </LinearLayout>
 
         <ScrollView
             android:id="@+id/logScrollView"
@@ -233,7 +295,8 @@
                 android:text="[Log ready]"
                 android:textColor="#00FF00"
                 android:textSize="10sp"
-                android:typeface="monospace" />
+                android:typeface="monospace"
+                android:textIsSelectable="true" />
 
         </ScrollView>
 
