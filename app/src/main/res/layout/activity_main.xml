@@ -68,6 +68,7 @@
             android:textColor="#555555"
             android:visibility="gone" />
 
+        <!-- Last Update - HIDE saat Manual ON -->
         <TextView
             android:id="@+id/tvLastUpdate"
             android:layout_width="wrap_content"
@@ -75,7 +76,8 @@
             android:layout_marginTop="2dp"
             android:text="Last update: -"
             android:textSize="12sp"
-            android:textColor="#555555" />
+            android:textColor="#555555"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnUpdate"
@@ -140,18 +142,23 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <EditText
-                android:id="@+id/etPifEditor"
+            <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="150dp"
                 android:layout_marginTop="4dp"
-                android:background="#F5F5F5"
-                android:gravity="top|start"
-                android:padding="8dp"
-                android:textSize="12sp"
-                android:typeface="monospace"
-                android:textColor="#000000"
-                android:scrollbars="vertical" />
+                android:background="#F5F5F5">
+
+                <EditText
+                    android:id="@+id/etPifEditor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top|start"
+                    android:padding="8dp"
+                    android:textSize="12sp"
+                    android:typeface="monospace"
+                    android:textColor="#000000"
+                    android:background="@null" />
+            </ScrollView>
 
             <Button
                 android:id="@+id/btnApplyManual"
@@ -172,19 +179,25 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/etGameProps"
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
             android:background="#F5F5F5"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:textSize="12sp"
-            android:typeface="monospace"
-            android:textColor="#000000"
-            android:scrollbars="vertical"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:id="@+id/scrollGameProps">
+
+            <EditText
+                android:id="@+id/etGameProps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top|start"
+                android:padding="8dp"
+                android:textSize="12sp"
+                android:typeface="monospace"
+                android:textColor="#000000"
+                android:background="@null" />
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -216,19 +229,25 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/etThermals"
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
             android:background="#F5F5F5"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:textSize="12sp"
-            android:typeface="monospace"
-            android:textColor="#000000"
-            android:scrollbars="vertical"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:id="@+id/scrollThermals">
+
+            <EditText
+                android:id="@+id/etThermals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top|start"
+                android:padding="8dp"
+                android:textSize="12sp"
+                android:typeface="monospace"
+                android:textColor="#000000"
+                android:background="@null" />
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
