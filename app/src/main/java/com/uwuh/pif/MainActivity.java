@@ -6,19 +6,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemProperties;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -37,7 +35,6 @@ public class MainActivity extends Activity {
     private static final String DIR = "/data/system/uwuh";
     private static final String LOCAL_DIR = "/data/local/uwuh";
     
-    // File paths
     private static final String KB_PATH = DIR + "/keybox.xml";
     private static final String PIF_PATH = DIR + "/pif.prop";
     private static final String CUST_KB_PATH = DIR + "/cust_keybox.xml";
@@ -45,24 +42,22 @@ public class MainActivity extends Activity {
     private static final String GAMEPROPS_PATH = LOCAL_DIR + "/gameprops.json";
     private static final String THERMALS_PATH = LOCAL_DIR + "/per_app_thermals.json";
     
-    // URLs
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
     private static final String URL_GAMEPROPS = "https://raw.githubusercontent.com/user/repo/main/gameprops.json";
     private static final String URL_THERMALS = "https://raw.githubusercontent.com/user/repo/main/per_app_thermals.json";
     
-    // Persist props
     private static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
     private static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
     private static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
+    private static final String PROP_DEBUG = "persist.sys.oemports10t.utils-debug";
     
     private SharedPreferences sp;
-    private Switch switchAuto, switchBootloader, switchPIF, switchProvider;
+    private Switch switchAuto, switchBootloader, switchPIF, switchProvider, switchDebug;
     private TextView tvStatus, tvLastUpdate;
     private LinearLayout panelManual;
     private EditText etPifEditor;
     private Button btnUpdate, btnApplyManual;
-    private String importedPifContent = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,11 +66,11 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
-        // Init views
         switchAuto = findViewById(R.id.switchAuto);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
         switchProvider = findViewById(R.id.switchProvider);
+        switchDebug = findViewById(R.id.switchDebug);
         tvStatus = findViewById(R.id.tvStatus);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         panelManual = findViewById(R.id.panelManual);
@@ -83,69 +78,59 @@ public class MainActivity extends Activity {
         btnUpdate = findViewById(R.id.btnUpdate);
         btnApplyManual = findViewById(R.id.btnApplyManual);
 
-        // Load saved states
         boolean isAuto = sp.getBoolean("auto", true);
         switchAuto.setChecked(isAuto);
         updateUIState(isAuto);
 
-        // Load persist states
-        switchBootloader.setChecked(SystemProperties.getBoolean(PROP_BOOTLOADER, true));
-        switchPIF.setChecked(SystemProperties.getBoolean(PROP_PIF, true));
-        switchProvider.setChecked(SystemProperties.getBoolean(PROP_USE_CUSTOM, false));
+        // Gunakan SystemPropertiesHelper
+        switchBootloader.setChecked(SystemPropertiesHelper.getBoolean(PROP_BOOTLOADER, true));
+        switchPIF.setChecked(SystemPropertiesHelper.getBoolean(PROP_PIF, true));
+        switchProvider.setChecked(SystemPropertiesHelper.getBoolean(PROP_USE_CUSTOM, false));
+        switchDebug.setChecked(SystemPropertiesHelper.getBoolean(PROP_DEBUG, false));
 
-        // ==================== SWITCH LISTENERS ====================
-        
+        // Switch Listeners
         switchAuto.setOnCheckedChangeListener((v, checked) -> {
             sp.edit().putBoolean("auto", checked).apply();
             updateUIState(checked);
         });
 
         switchBootloader.setOnCheckedChangeListener((v, checked) -> {
-            SystemProperties.set(PROP_BOOTLOADER, checked ? "true" : "false");
-            setStatus("Bootloader spoof: " + (checked ? "ON" : "OFF"));
+            SystemPropertiesHelper.set(PROP_BOOTLOADER, checked ? "true" : "false");
+            setStatus("Bootloader: " + (checked ? "ON" : "OFF"));
         });
 
         switchPIF.setOnCheckedChangeListener((v, checked) -> {
-            SystemProperties.set(PROP_PIF, checked ? "true" : "false");
-            setStatus("PIF spoof: " + (checked ? "ON" : "OFF"));
+            SystemPropertiesHelper.set(PROP_PIF, checked ? "true" : "false");
+            setStatus("PIF: " + (checked ? "ON" : "OFF"));
         });
 
         switchProvider.setOnCheckedChangeListener((v, checked) -> {
-            SystemProperties.set(PROP_USE_CUSTOM, checked ? "true" : "false");
+            SystemPropertiesHelper.set(PROP_USE_CUSTOM, checked ? "true" : "false");
             if (checked) {
                 setStatus("Custom provider: FORCED");
-                // Force reload PIF from custom file
                 forceReloadPIF();
             } else {
                 setStatus("Custom provider: DEFAULT");
             }
         });
 
-        // ==================== BUTTON LISTENERS ====================
-
-        btnUpdate.setOnClickListener(v -> {
-            new Thread(() -> checkUpdateOnline(true)).start();
+        switchDebug.setOnCheckedChangeListener((v, checked) -> {
+            SystemPropertiesHelper.set(PROP_DEBUG, checked ? "true" : "false");
+            setStatus("Debug: " + (checked ? "ON" : "OFF"));
         });
 
-        findViewById(R.id.btnLoadGameProps).setOnClickListener(v -> {
-            pickFileForLoad(GAMEPROPS_PATH, "gameprops.json", URL_GAMEPROPS);
-        });
+        btnUpdate.setOnClickListener(v -> new Thread(() -> checkUpdateOnline(true)).start());
 
-        findViewById(R.id.btnLoadThermals).setOnClickListener(v -> {
-            pickFileForLoad(THERMALS_PATH, "per_app_thermals.json", URL_THERMALS);
-        });
-
+        findViewById(R.id.btnLoadGameProps).setOnClickListener(v -> pickFileForLoad(GAMEPROPS_PATH, "gameprops.json"));
+        findViewById(R.id.btnLoadThermals).setOnClickListener(v -> pickFileForLoad(THERMALS_PATH, "per_app_thermals.json"));
         findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile(101));
         findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile(102));
 
         btnApplyManual.setOnClickListener(v -> applyManualPIF());
-
         findViewById(R.id.btnResetPersist).setOnClickListener(v -> resetPersistProps());
 
-        // ==================== LOAD CUSTOM PIF ====================
         loadCustomPIF();
 
-        // ==================== INITIAL BACKGROUND ====================
         new Thread(() -> {
             createDirectories();
             applyFallback();
