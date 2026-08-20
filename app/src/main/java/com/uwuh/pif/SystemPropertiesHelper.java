@@ -7,10 +7,6 @@ import java.lang.reflect.Method;
 public class SystemPropertiesHelper {
     private static final String TAG = "SysPropHelper";
 
-    public static String get(String key) {
-        return get(key, null);
-    }
-
     public static String get(String key, String def) {
         try {
             Class<?> c = Class.forName("android.os.SystemProperties");
