@@ -50,14 +50,6 @@
             android:text="Force Custom Provider"
             android:textSize="14sp" />
 
-        <Switch
-            android:id="@+id/switchDebug"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Debug Mode"
-            android:textSize="14sp" />
-
         <!-- ==================== ADDITIONAL FILES ==================== -->
         <TextView
             android:layout_width="wrap_content"
@@ -190,12 +182,36 @@
             android:textSize="12sp"
             android:textColor="#555555" />
 
-        <!-- ==================== LOG VIEWER (DEBUG MODE) ==================== -->
+        <!-- ==================== DIVIDER ==================== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:background="#CCCCCC" />
+
+        <!-- ==================== DEBUG TOGGLE (PALING BAWAH) ==================== -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Debug"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Switch
+            android:id="@+id/switchDebug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Debug Mode"
+            android:textSize="14sp" />
+
+        <!-- ==================== LOG VIEWER ==================== -->
         <TextView
             android:id="@+id/tvLogTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:text="=== Debug Log ==="
             android:textSize="12sp"
             android:textStyle="bold"
