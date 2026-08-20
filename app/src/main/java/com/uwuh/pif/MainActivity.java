@@ -21,6 +21,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -70,9 +71,11 @@ public class MainActivity extends Activity {
     private SharedPreferences sp;
     private Switch switchManual, switchBootloader, switchPIF, switchProvider, switchDebug;
     private TextView tvStatus, tvLastUpdate, tvAutoStatus;
+    private TextView tvKeyboxLastApply, tvPifLastApply;
     private LinearLayout panelManual;
     private EditText etPifEditor, etGameProps, etThermals;
     private Button btnUpdate, btnApplyManual, btnGameProps, btnThermals;
+    private Button btnResetGameProps, btnResetThermals;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +93,8 @@ public class MainActivity extends Activity {
         tvStatus = findViewById(R.id.tvStatus);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         tvAutoStatus = findViewById(R.id.tvAutoStatus);
+        tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
+        tvPifLastApply = findViewById(R.id.tvPifLastApply);
         panelManual = findViewById(R.id.panelManual);
         etPifEditor = findViewById(R.id.etPifEditor);
         etGameProps = findViewById(R.id.etGameProps);
@@ -98,6 +103,8 @@ public class MainActivity extends Activity {
         btnApplyManual = findViewById(R.id.btnApplyManual);
         btnGameProps = findViewById(R.id.btnGameProps);
         btnThermals = findViewById(R.id.btnThermals);
+        btnResetGameProps = findViewById(R.id.btnResetGameProps);
+        btnResetThermals = findViewById(R.id.btnResetThermals);
 
         // Log viewer
         tvLog = findViewById(R.id.tvLog);
@@ -120,6 +127,10 @@ public class MainActivity extends Activity {
         switchDebug.setChecked(isDebugMode);
         updateDebugUI(isDebugMode);
 
+        // Load last apply times
+        tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
+        tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
+
         // Load editors
         loadGameProps();
         loadThermals();
@@ -135,19 +146,16 @@ public class MainActivity extends Activity {
 
         switchBootloader.setOnCheckedChangeListener((v, checked) -> {
             SystemPropertiesHelper.set(PROP_BOOTLOADER, checked ? "true" : "false");
-            setStatus("Bootloader: " + (checked ? "ON" : "OFF"));
             addLog("Bootloader spoof: " + (checked ? "ON" : "OFF"));
         });
 
         switchPIF.setOnCheckedChangeListener((v, checked) -> {
             SystemPropertiesHelper.set(PROP_PIF, checked ? "true" : "false");
-            setStatus("PIF: " + (checked ? "ON" : "OFF"));
             addLog("PIF spoof: " + (checked ? "ON" : "OFF"));
         });
 
         switchProvider.setOnCheckedChangeListener((v, checked) -> {
             SystemPropertiesHelper.set(PROP_USE_CUSTOM, checked ? "true" : "false");
-            setStatus("Custom: " + (checked ? "ON" : "OFF"));
             addLog("Custom provider: " + (checked ? "ON" : "OFF"));
             if (checked) forceReloadPIF();
         });
@@ -157,7 +165,6 @@ public class MainActivity extends Activity {
             isDebugMode = checked;
             updateDebugUI(checked);
             addLog("Debug mode: " + (checked ? "ON" : "OFF"));
-            setStatus("Debug: " + (checked ? "ON" : "OFF"));
         });
 
         // ==================== BUTTON LISTENERS ====================
@@ -171,6 +178,8 @@ public class MainActivity extends Activity {
 
         btnGameProps.setOnClickListener(v -> toggleGameProps());
         btnThermals.setOnClickListener(v -> toggleThermals());
+        btnResetGameProps.setOnClickListener(v -> resetGameProps());
+        btnResetThermals.setOnClickListener(v -> resetThermals());
         
         findViewById(R.id.btnPickKeybox).setOnClickListener(v -> {
             addLog("Picking Keybox...");
@@ -182,13 +191,10 @@ public class MainActivity extends Activity {
             pickFile(102);
         });
         
-        btnApplyManual.setOnClickListener(v -> {
-            addLog("Applying manual PIF...");
-            applyManualPIF();
-        });
+        btnApplyManual.setOnClickListener(v -> applyManualPIF());
         
         findViewById(R.id.btnResetPersist).setOnClickListener(v -> {
-            addLog("Resetting persist props...");
+            addLog("Resetting configuration...");
             resetPersistProps();
         });
 
@@ -202,6 +208,58 @@ public class MainActivity extends Activity {
                 checkUpdateOnline(false);
             }
         }).start();
+    }
+
+    // ==================== VALIDATION ====================
+
+    private boolean validateProp(String content) {
+        if (content == null || content.trim().isEmpty()) return false;
+        String[] lines = content.split("\n");
+        boolean hasManufacturer = false, hasModel = false, hasFingerprint = false;
+        boolean hasBrand = false, hasProduct = false, hasDevice = false;
+        boolean hasSecurityPatch = false, hasSdk = false;
+        
+        for (String line : lines) {
+            line = line.trim();
+            if (line.startsWith("#") || line.isEmpty()) continue;
+            if (line.contains("=")) {
+                String key = line.substring(0, line.indexOf('=')).trim();
+                String value = line.substring(line.indexOf('=') + 1).trim();
+                if (key.equals("MANUFACTURER") && !value.isEmpty()) hasManufacturer = true;
+                else if (key.equals("MODEL") && !value.isEmpty()) hasModel = true;
+                else if (key.equals("FINGERPRINT") && !value.isEmpty()) hasFingerprint = true;
+                else if (key.equals("BRAND") && !value.isEmpty()) hasBrand = true;
+                else if (key.equals("PRODUCT") && !value.isEmpty()) hasProduct = true;
+                else if (key.equals("DEVICE") && !value.isEmpty()) hasDevice = true;
+                else if (key.equals("SECURITY_PATCH") && !value.isEmpty()) hasSecurityPatch = true;
+                else if (key.equals("DEVICE_INITIAL_SDK_INT") && !value.isEmpty()) hasSdk = true;
+            }
+        }
+        return hasManufacturer && hasModel && hasFingerprint && hasBrand && 
+               hasProduct && hasDevice && hasSecurityPatch && hasSdk;
+    }
+
+    private boolean validateJson(String content) {
+        if (content == null || content.trim().isEmpty()) return false;
+        try {
+            new JSONObject(content);
+            return true;
+        } catch (JSONException e) {
+            return false;
+        }
+    }
+
+    private void updateApplyButton(Button btn, EditText editor, boolean isJson) {
+        String content = editor.getText().toString().trim();
+        boolean valid = isJson ? validateJson(content) : validateProp(content);
+        btn.setEnabled(valid);
+        if (!valid && !content.isEmpty() && !content.startsWith("#") && !content.startsWith("{")) {
+            btn.setText("Error: Invalid format");
+        } else if (!valid && content.isEmpty()) {
+            btn.setText("APPLY");
+        } else {
+            btn.setText("APPLY");
+        }
     }
 
     // ==================== EDITOR TOGGLES ====================
@@ -235,6 +293,7 @@ public class MainActivity extends Activity {
         String content = readFile(GAMEPROPS_PATH);
         if (content != null && !content.isEmpty()) {
             etGameProps.setText(content);
+            updateApplyButton(btnGameProps, etGameProps, true);
         } else {
             etGameProps.setText("{\n    \"device1\": {\n        \"PKGNAMES\": [],\n        \"MANUFACTURER\": \"\",\n        \"MODEL\": \"\"\n    }\n}");
         }
@@ -242,10 +301,26 @@ public class MainActivity extends Activity {
 
     private void saveGameProps() {
         String content = etGameProps.getText().toString().trim();
-        if (!content.isEmpty()) {
+        if (validateJson(content)) {
             write(GAMEPROPS_PATH, content);
             addLog("GameProps saved");
             Toast.makeText(this, "GameProps saved", Toast.LENGTH_SHORT).show();
+            btnGameProps.setText("Edit GameProps");
+            gamePropsVisible = false;
+            etGameProps.setVisibility(View.GONE);
+        } else {
+            Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
+            addLog("GameProps: Invalid JSON");
+        }
+    }
+
+    private void resetGameProps() {
+        String data = readRaw(R.raw.default_gameprops);
+        if (!data.isEmpty()) {
+            write(GAMEPROPS_PATH, data);
+            etGameProps.setText(data);
+            addLog("GameProps reset to default");
+            Toast.makeText(this, "GameProps reset", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -253,6 +328,7 @@ public class MainActivity extends Activity {
         String content = readFile(THERMALS_PATH);
         if (content != null && !content.isEmpty()) {
             etThermals.setText(content);
+            updateApplyButton(btnThermals, etThermals, true);
         } else {
             etThermals.setText("{\n    \"DEFAULT\": \"0\",\n    \"1\": {\n        \"PKGNAMES\": [],\n        \"THERMAL_PROFILE\": \"\"\n    }\n}");
         }
@@ -260,10 +336,26 @@ public class MainActivity extends Activity {
 
     private void saveThermals() {
         String content = etThermals.getText().toString().trim();
-        if (!content.isEmpty()) {
+        if (validateJson(content)) {
             write(THERMALS_PATH, content);
             addLog("Thermals saved");
             Toast.makeText(this, "Thermals saved", Toast.LENGTH_SHORT).show();
+            btnThermals.setText("Edit Thermals");
+            thermalsVisible = false;
+            etThermals.setVisibility(View.GONE);
+        } else {
+            Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
+            addLog("Thermals: Invalid JSON");
+        }
+    }
+
+    private void resetThermals() {
+        String data = readRaw(R.raw.default_thermals);
+        if (!data.isEmpty()) {
+            write(THERMALS_PATH, data);
+            etThermals.setText(data);
+            addLog("Thermals reset to default");
+            Toast.makeText(this, "Thermals reset", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -296,8 +388,8 @@ public class MainActivity extends Activity {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData clip = ClipData.newPlainText("Debug Log", logText);
             clipboard.setPrimaryClip(clip);
-            Toast.makeText(this, "Log copied to clipboard", Toast.LENGTH_SHORT).show();
-            addLog("Log copied to clipboard");
+            Toast.makeText(this, "Log copied", Toast.LENGTH_SHORT).show();
+            addLog("Log copied");
         }
     }
 
@@ -319,22 +411,19 @@ public class MainActivity extends Activity {
     private void updateUIState(boolean isManual) {
         panelManual.setVisibility(isManual ? View.VISIBLE : View.GONE);
         btnUpdate.setVisibility(isManual ? View.GONE : View.VISIBLE);
+        tvAutoStatus.setVisibility(isManual ? View.GONE : View.VISIBLE);
         tvAutoStatus.setText(isManual ? "Auto update: OFF" : "Auto update: ON");
         String lastUpdate = sp.getString("last_update", "-");
         tvLastUpdate.setText("Last update: " + lastUpdate);
-        setStatus(isManual ? "Mode: Manual" : "Mode: Auto");
-        addLog("UI mode: " + (isManual ? "Manual" : "Auto"));
-    }
-
-    private void setStatus(String msg) {
-        runOnUiThread(() -> tvStatus.setText("Status: " + msg));
+        addLog("Mode: " + (isManual ? "Manual" : "Auto"));
     }
 
     private void loadCustomPIF() {
         String content = readFile(CUST_PIF_PATH);
         if (content != null && !content.isEmpty()) {
             etPifEditor.setText(content);
-            addLog("Custom PIF loaded from file");
+            updateApplyButton(btnApplyManual, etPifEditor, false);
+            addLog("Custom PIF loaded");
         } else {
             etPifEditor.setText("# No custom PIF loaded");
         }
@@ -421,7 +510,6 @@ public class MainActivity extends Activity {
                 if (showToast) {
                     Toast.makeText(MainActivity.this, isUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
                 }
-                setStatus("Update completed");
             });
 
             if (updated) {
@@ -436,7 +524,6 @@ public class MainActivity extends Activity {
             addLog("Update error: " + e.getMessage());
             runOnUiThread(() -> {
                 if (showToast) Toast.makeText(MainActivity.this, "Update failed", Toast.LENGTH_SHORT).show();
-                setStatus("Update failed");
             });
         }
     }
@@ -449,6 +536,12 @@ public class MainActivity extends Activity {
             return;
         }
 
+        if (!validateProp(content)) {
+            Toast.makeText(this, "Invalid PROP format", Toast.LENGTH_SHORT).show();
+            addLog("Manual PIF: Invalid format");
+            return;
+        }
+
         if (content.trim().startsWith("{")) {
             content = convertJsonToProp(content);
             etPifEditor.setText(content);
@@ -456,9 +549,12 @@ public class MainActivity extends Activity {
         }
 
         write(CUST_PIF_PATH, content);
+        String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+        sp.edit().putString("pif_last_apply", time).apply();
+        tvPifLastApply.setText("Last apply: " + time);
+        
         addLog("Manual PIF saved to " + CUST_PIF_PATH);
         Toast.makeText(this, "Custom PIF applied!", Toast.LENGTH_SHORT).show();
-        setStatus("Manual PIF applied");
         if (switchProvider.isChecked()) forceReloadPIF();
         killGMSAndVending();
         addLog("Manual PIF applied, GMS & Vending killed");
@@ -489,7 +585,6 @@ public class MainActivity extends Activity {
             f.setLastModified(System.currentTimeMillis());
             addLog("Custom PIF force reloaded");
         }
-        setStatus("Custom PIF reloaded");
     }
 
     private void pickFile(int requestCode) {
@@ -511,20 +606,32 @@ public class MainActivity extends Activity {
 
                 if (req == 101) {
                     write(CUST_KB_PATH, content);
+                    String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+                    sp.edit().putString("keybox_last_apply", time).apply();
+                    runOnUiThread(() -> {
+                        tvKeyboxLastApply.setText("Last apply: " + time);
+                        Toast.makeText(MainActivity.this, "Custom Keybox saved", Toast.LENGTH_SHORT).show();
+                    });
                     addLog("Custom Keybox saved");
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Custom Keybox saved", Toast.LENGTH_SHORT).show());
                 } else if (req == 102) {
                     if (content.trim().startsWith("{")) content = convertJsonToProp(content);
                     final String finalContent = content;
-                    write(CUST_PIF_PATH, finalContent);
-                    addLog("Custom PIF saved");
-                    runOnUiThread(() -> {
-                        etPifEditor.setText(finalContent);
-                        Toast.makeText(MainActivity.this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
-                        if (switchProvider.isChecked()) forceReloadPIF();
-                    });
-                    killGMSAndVending();
-                    addLog("GMS & Vending killed after PIF save");
+                    if (validateProp(finalContent)) {
+                        write(CUST_PIF_PATH, finalContent);
+                        String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+                        sp.edit().putString("pif_last_apply", time).apply();
+                        runOnUiThread(() -> {
+                            tvPifLastApply.setText("Last apply: " + time);
+                            etPifEditor.setText(finalContent);
+                            Toast.makeText(MainActivity.this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
+                            if (switchProvider.isChecked()) forceReloadPIF();
+                        });
+                        killGMSAndVending();
+                        addLog("Custom PIF saved, GMS & Vending killed");
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Invalid PIF format", Toast.LENGTH_SHORT).show());
+                        addLog("Custom PIF: Invalid format");
+                    }
                 }
             }).start();
         }
@@ -536,14 +643,13 @@ public class MainActivity extends Activity {
         SystemPropertiesHelper.set(PROP_USE_CUSTOM, "false");
         SystemPropertiesHelper.set(PROP_DEBUG, "false");
 
-        addLog("Persist props reset to default");
+        addLog("Configuration reset to default");
         runOnUiThread(() -> {
             switchBootloader.setChecked(true);
             switchPIF.setChecked(true);
             switchProvider.setChecked(false);
             switchDebug.setChecked(false);
-            Toast.makeText(MainActivity.this, "Persist props reset", Toast.LENGTH_SHORT).show();
-            setStatus("Persist reset");
+            Toast.makeText(MainActivity.this, "Configuration reset", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -555,12 +661,11 @@ public class MainActivity extends Activity {
                 forceStop.setAccessible(true);
                 forceStop.invoke(am, "com.google.android.gms");
                 forceStop.invoke(am, "com.android.vending");
-                Log.d(TAG, "GMS & Vending killed");
-                addLog("GMS & Vending killed via forceStop");
+                addLog("GMS & Vending killed");
             } catch (Exception e) {
                 am.killBackgroundProcesses("com.google.android.gms");
                 am.killBackgroundProcesses("com.android.vending");
-                addLog("GMS & Vending killed via killBackgroundProcesses");
+                addLog("GMS & Vending killed via bg");
             }
         } catch (Exception e) {
             Log.e(TAG, "Kill error: " + e.getMessage());
