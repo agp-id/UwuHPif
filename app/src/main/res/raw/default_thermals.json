@@ -1,0 +1,153 @@
+{
+  "DEFAULT": "0",
+  "9": {
+    "PKGNAMES": [
+      "com.mobile.legends",
+      "com.supercell.clashofclans",
+      "com.epicgames.portal",
+      "com.gameloft.android.ANMP.GloftA9HM",
+      "com.madfingergames.legends",
+      "com.riotgames.league.wildrift",
+      "com.riotgames.league.wildrifttw",
+      "com.riotgames.league.wildriftvn",
+      "com.riotgames.league.teamfighttactics",
+      "com.riotgames.league.teamfighttacticstw",
+      "com.riotgames.league.teamfighttacticsvn",
+      "com.YoStar.AetherGazer",
+      "com.vng.mlbbvn",
+      "com.levelinfinite.sgameGlobal",
+      "com.dts.freefiremax",
+      "com.dts.freefireth",
+      "com.supercell.clashroyale",
+      "com.levelinfinite.sgameGlobal.midaspay",
+      "com.YoStarEN.Arknights",
+      "com.whatsapp",
+      "org.telegram.messenger",
+      "com.twitter.android",
+      "com.linkedin.android",
+      "com.snapchat.android",
+      "com.zhiliaoapp.musically",
+      "com.pinterest",
+      "tw.nekomimi.nekogram",
+      "com.reddit.frontpage",
+      "com.tumblr",
+      "com.discord",
+      "org.thoughtcrime.securesms",
+      "com.tencent.mm"
+    ]
+  },
+  "10": {
+    "PKGNAMES": [
+      "com.primatelabs.geekbench6",
+      "com.antutu.ABenchMark",
+      "com.futuremark.dmandroid.application",
+      "net.kishonti.gfxbench.gl.v50000",
+      "com.futuremark.pcmark.android.benchmark",
+      "com.andromeda.androbench2",
+      "com.cpuid.cpu_z",
+      "com.passmark.pt_mobile",
+      "com.a1dev.sdbench",
+      "com.aurorasoftworks.quadrant.ui.standard",
+      "com.antutu.benchmark.full",
+      "com.antutu.benchmark.full.lite",
+      "skynet.cputhrottlingtest"
+    ]
+  },
+  "7": {
+    "PKGNAMES": [
+      "com.netflix.mediaclient",
+      "com.amazon.avod.thirdpartyclient",
+      "com.disney.disneyplus",
+      "com.hulu.plus",
+      "com.hbo.hbonow",
+      "com.apple.atve",
+      "com.peacocktv.peacockandroid",
+      "com.cbs.ott",
+      "com.sling",
+      "com.crunchyroll.crunchyroid",
+      "com.instagram.android",
+      "com.facebook.katana",
+      "com.facebook.lite",
+      "com.facebook.mlite",
+      "com.facebook.orca"
+    ]
+  },
+  "12": {
+    "PKGNAMES": [
+      "com.motorola.camera2",
+      "com.oneplus.camera",
+      "com.xiaomi.camera",
+      "com.google.android.GoogleCamera",
+      "com.shamim.camera",
+      "net.sourceforge.opencamera",
+      "com.flavionet.android.camera.pro",
+      "com.footej.camera",
+      "com.riseupgames.proshot2",
+      "com.marginz.snap",
+      "com.halide.marki",
+      "com.shopmoment.momentprocamera"
+    ]
+  },
+  "13": {
+    "PKGNAMES": [
+      "com.proximabeta.mf.uamo",
+      "com.pubg.imobile",
+      "com.pubg.krmobile",
+      "com.rekoo.pubgm",
+      "com.tencent.tmgp.pubgmhd",
+      "com.vng.pubgmobile",
+      "com.tencent.ig"
+    ]
+  },
+  "16": {
+    "PKGNAMES": [
+      "com.ea.gp.apexlegendsmobilefps",
+      "com.epicgames.fortnite",
+      "com.activision.callofduty.shooter",
+      "com.tencent.tmgp.cod",
+      "com.garena.game.codm",
+      "com.tencent.tmgp.kr.codm",
+      "com.vng.codmvn",
+      "com.levelinfinite.hotta.gp",
+      "com.pearlabyss.blackdesertm",
+      "com.pearlabyss.blackdesertm.gl",
+      "com.netease.lztgglobal",
+      "jp.konami.pesam",
+      "com.tencent.tmgp.cf",
+      "com.tencent.KiHan",
+      "com.tencent.lolm",
+      "com.studiowildcard.wardrumstudios.ark",
+      "air.com.ubisoft.brawl.halla.platform.fighting.action.pvp",
+      "com.Psyonix.RL2D",
+      "com.miHoYo.GenshinImpact",
+      "com.Mediatonic.FallGuys_client",
+      "com.garena.game.kgvn",
+      "com.kurogame.wutheringwaves.global",
+      "com.HoYoverse.hkrpgoversea",
+      "com.miHoYo.bh3oversea"
+    ]
+  },
+  "21": {
+    "PKGNAMES": [
+      "org.videolan.vlc",
+      "com.mxtech.videoplayer.ad",
+      "com.kmplayer",
+      "com.plexapp.android",
+      "com.gretech.gomplayerko",
+      "video.player.videoplayer",
+      "com.bsplayer.bspandroid.free",
+      "xmw.app.plex",
+      "net.fixthephoto.videoeditor",
+      "is.xyz.mpv",
+      "com.brouken.player",
+      "app.rvx.android.youtube",
+      "com.vanced.android.youtube",
+      "org.schabi.newpipe",
+      "app.revanced.android.youtube",
+      "com.github.libretube",
+      "com.google.android.youtube",
+      "com.vanced.android.apps.youtube.music"
+    ]
+  }
+}
+
