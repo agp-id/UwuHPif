@@ -9,19 +9,10 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Title -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="PIF Manager"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
         <!-- ==================== CONFIG TOGGLES ==================== -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:text="Konfigurasi"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -74,7 +65,8 @@
             android:layout_marginTop="4dp"
             android:text="Auto update: ON"
             android:textSize="12sp"
-            android:textColor="#555555" />
+            android:textColor="#555555"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvLastUpdate"
@@ -115,12 +107,30 @@
                 android:layout_marginTop="8dp"
                 android:text="Pilih Keybox (.xml)" />
 
+            <TextView
+                android:id="@+id/tvKeyboxLastApply"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last apply: -"
+                android:textSize="11sp"
+                android:textColor="#888888"
+                android:layout_marginTop="2dp" />
+
             <Button
                 android:id="@+id/btnPickPIF"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Pilih PIF (.prop / .json)" />
+
+            <TextView
+                android:id="@+id/tvPifLastApply"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last apply: -"
+                android:textSize="11sp"
+                android:textColor="#888888"
+                android:layout_marginTop="2dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -173,12 +183,26 @@
             android:textColor="#000000"
             android:visibility="gone" />
 
-        <Button
-            android:id="@+id/btnGameProps"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Edit GameProps" />
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btnGameProps"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Edit GameProps" />
+
+            <Button
+                android:id="@+id/btnResetGameProps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reset Config"
+                android:layout_marginLeft="4dp" />
+        </LinearLayout>
 
         <!-- ==================== EDITOR: THERMALS ==================== -->
         <TextView
@@ -202,12 +226,26 @@
             android:textColor="#000000"
             android:visibility="gone" />
 
-        <Button
-            android:id="@+id/btnThermals"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Edit Thermals" />
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btnThermals"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Edit Thermals" />
+
+            <Button
+                android:id="@+id/btnResetThermals"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reset Config"
+                android:layout_marginLeft="4dp" />
+        </LinearLayout>
 
         <!-- ==================== RESET ==================== -->
         <Button
@@ -215,17 +253,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Reset Persist Properties" />
-
-        <!-- ==================== STATUS ==================== -->
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Ready"
-            android:textSize="12sp"
-            android:textColor="#555555" />
+            android:text="Reset Configuration" />
 
         <!-- ==================== DIVIDER ==================== -->
         <View
@@ -235,19 +263,11 @@
             android:background="#CCCCCC" />
 
         <!-- ==================== DEBUG TOGGLE ==================== -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Debug"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
         <Switch
             android:id="@+id/switchDebug"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="12dp"
             android:text="Debug Mode"
             android:textSize="14sp" />
 
@@ -274,6 +294,8 @@
                 android:layout_height="wrap_content"
                 android:text="Copy"
                 android:textSize="10sp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
                 android:paddingLeft="8dp"
                 android:paddingRight="8dp"
                 android:visibility="gone" />
