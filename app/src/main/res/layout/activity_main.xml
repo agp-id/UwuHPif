@@ -190,5 +190,36 @@
             android:textSize="12sp"
             android:textColor="#555555" />
 
+        <!-- ==================== LOG VIEWER (DEBUG MODE) ==================== -->
+        <TextView
+            android:id="@+id/tvLogTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="=== Debug Log ==="
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <ScrollView
+            android:id="@+id/logScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="4dp"
+            android:background="#1A1A1A"
+            android:padding="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvLog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="[Log ready]"
+                android:textColor="#00FF00"
+                android:textSize="10sp"
+                android:typeface="monospace" />
+
+        </ScrollView>
+
     </LinearLayout>
 </ScrollView>
