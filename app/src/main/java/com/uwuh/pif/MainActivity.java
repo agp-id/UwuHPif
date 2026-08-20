@@ -7,7 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;  // ← Log dengan L BESAR
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -196,25 +196,30 @@ public class MainActivity extends Activity {
             boolean updated = false;
 
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
-                write(KB_PATH, newKb); updated = true;
+                write(KB_PATH, newKb);
+                updated = true;
             }
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
-                write(PIF_PATH, newPif); updated = true;
+                write(PIF_PATH, newPif);
+                updated = true;
             }
             if (newGame != null && !newGame.isEmpty() && !newGame.equals(readFile(GAMEPROPS_PATH))) {
-                write(GAMEPROPS_PATH, newGame); updated = true;
+                write(GAMEPROPS_PATH, newGame);
+                updated = true;
             }
             if (newTherm != null && !newTherm.isEmpty() && !newTherm.equals(readFile(THERMALS_PATH))) {
-                write(THERMALS_PATH, newTherm); updated = true;
+                write(THERMALS_PATH, newTherm);
+                updated = true;
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
             sp.edit().putString("last_update", date).apply();
 
+            final boolean isUpdated = updated;  // ← BUAT FINAL VARIABLE
             runOnUiThread(() -> {
                 tvLastUpdate.setText("Last update: " + date);
                 if (showToast) {
-                    Toast.makeText(this, updated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, isUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
                 }
                 setStatus("Update completed");
             });
@@ -224,7 +229,7 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             Log.e(TAG, "Update error: " + e.getMessage());
             runOnUiThread(() -> {
-                if (showToast) Toast.makeText(this, "Update failed", Toast.LENGTH_SHORT).show();
+                if (showToast) Toast.makeText(MainActivity.this, "Update failed", Toast.LENGTH_SHORT).show();
                 setStatus("Update failed");
             });
         }
@@ -290,22 +295,23 @@ public class MainActivity extends Activity {
 
                 if (req == 101) {
                     write(CUST_KB_PATH, content);
-                    runOnUiThread(() -> Toast.makeText(this, "Custom Keybox saved", Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Custom Keybox saved", Toast.LENGTH_SHORT).show());
                 } else if (req == 102) {
                     if (content.trim().startsWith("{")) content = convertJsonToProp(content);
-                    write(CUST_PIF_PATH, content);
+                    final String finalContent = content;  // ← BUAT FINAL VARIABLE
+                    write(CUST_PIF_PATH, finalContent);
                     runOnUiThread(() -> {
-                        etPifEditor.setText(content);
-                        Toast.makeText(this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
+                        etPifEditor.setText(finalContent);
+                        Toast.makeText(MainActivity.this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
                         if (switchProvider.isChecked()) forceReloadPIF();
                     });
                     killGMSAndVending();
                 } else if (req == 201) {
                     write(GAMEPROPS_PATH, content);
-                    runOnUiThread(() -> Toast.makeText(this, "GameProps saved", Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "GameProps saved", Toast.LENGTH_SHORT).show());
                 } else if (req == 202) {
                     write(THERMALS_PATH, content);
-                    runOnUiThread(() -> Toast.makeText(this, "Thermals saved", Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Thermals saved", Toast.LENGTH_SHORT).show());
                 }
             }).start();
         }
@@ -322,7 +328,7 @@ public class MainActivity extends Activity {
             switchPIF.setChecked(true);
             switchProvider.setChecked(false);
             switchDebug.setChecked(false);
-            Toast.makeText(this, "Persist props reset", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "Persist props reset", Toast.LENGTH_SHORT).show();
             setStatus("Persist reset");
         });
     }
