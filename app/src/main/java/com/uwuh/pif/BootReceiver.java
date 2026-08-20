@@ -20,11 +20,17 @@ import java.util.Locale;
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "PifManagerBoot";
     private static final String DIR = "/data/system/uwuh";
-    private static final String KB_PATH = DIR + "/custom_keybox.xml";
-    private static final String PIF_PATH = DIR + "/custom_pif.json";
+    private static final String LOCAL_DIR = "/data/local/uwuh";
+
+    private static final String KB_PATH = DIR + "/keybox.xml";
+    private static final String PIF_PATH = DIR + "/pif.prop";
+    private static final String GAMEPROPS_PATH = LOCAL_DIR + "/gameprops.json";
+    private static final String THERMALS_PATH = LOCAL_DIR + "/per_app_thermals.json";
 
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
-    private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.json";
+    private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
+    private static final String URL_GAMEPROPS = "https://raw.githubusercontent.com/user/repo/main/gameprops.json";
+    private static final String URL_THERMALS = "https://raw.githubusercontent.com/user/repo/main/per_app_thermals.json";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -33,10 +39,9 @@ public class BootReceiver extends BroadcastReceiver {
             boolean isAuto = sp.getBoolean("auto", true);
 
             new Thread(() -> {
-                // 1. Terapkan fallback jika file belum ada
+                createDirectories();
                 applyFallback(context);
 
-                // 2. Jika Mode AUTO aktif, cek update online dari GitHub saat booting
                 if (isAuto) {
                     checkUpdateOnline(context, sp);
                 }
@@ -44,18 +49,31 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
+    private void createDirectories() {
+        new File(DIR).mkdirs();
+        new File(LOCAL_DIR).mkdirs();
+    }
+
     private void applyFallback(Context context) {
-        File kbFile = new File(KB_PATH);
-        File pifFile = new File(PIF_PATH);
-
-        if (!kbFile.exists()) {
-            String kbData = readRaw(context, R.raw.default_keybox);
-            if (!kbData.isEmpty()) write(KB_PATH, kbData);
+        // Keybox
+        if (!new File(KB_PATH).exists()) {
+            String data = readRaw(context, R.raw.default_keybox);
+            if (!data.isEmpty()) write(KB_PATH, data);
         }
-
-        if (!pifFile.exists()) {
-            String pifData = readRaw(context, R.raw.default_pif);
-            if (!pifData.isEmpty()) write(PIF_PATH, pifData);
+        // PIF
+        if (!new File(PIF_PATH).exists()) {
+            String data = readRaw(context, R.raw.default_pif);
+            if (!data.isEmpty()) write(PIF_PATH, data);
+        }
+        // GameProps
+        if (!new File(GAMEPROPS_PATH).exists()) {
+            String data = readRaw(context, R.raw.default_gameprops);
+            if (!data.isEmpty()) write(GAMEPROPS_PATH, data);
+        }
+        // Thermals
+        if (!new File(THERMALS_PATH).exists()) {
+            String data = readRaw(context, R.raw.default_thermals);
+            if (!data.isEmpty()) write(THERMALS_PATH, data);
         }
     }
 
@@ -63,22 +81,40 @@ public class BootReceiver extends BroadcastReceiver {
         try {
             String newKb = fetch(URL_KB);
             String newPif = fetch(URL_PIF);
+            String newGame = fetch(URL_GAMEPROPS);
+            String newTherm = fetch(URL_THERMALS);
+
+            boolean updated = false;
 
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
                 write(KB_PATH, newKb);
+                updated = true;
             }
-
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
                 write(PIF_PATH, newPif);
+                updated = true;
+            }
+            if (newGame != null && !newGame.isEmpty() && !newGame.equals(readFile(GAMEPROPS_PATH))) {
+                write(GAMEPROPS_PATH, newGame);
+                updated = true;
+            }
+            if (newTherm != null && !newTherm.isEmpty() && !newTherm.equals(readFile(THERMALS_PATH))) {
+                write(THERMALS_PATH, newTherm);
+                updated = true;
             }
 
-            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-            sp.edit().putString("last_update", date).apply();
-            Log.d(TAG, "Auto update saat boot selesai.");
+            if (updated) {
+                String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+                sp.edit().putString("last_update", date).apply();
+                Log.d(TAG, "Auto update completed at boot");
+            }
+
         } catch (Exception e) {
-            Log.e(TAG, "Gagal auto update saat boot: " + e.getMessage());
+            Log.e(TAG, "Auto update failed: " + e.getMessage());
         }
     }
+
+    // ==================== UTILITY METHODS ====================
 
     private String fetch(String urlStr) throws Exception {
         URL url = new URL(urlStr);
@@ -97,14 +133,13 @@ public class BootReceiver extends BroadcastReceiver {
 
     private void write(String path, String content) {
         try {
-            File dir = new File(DIR);
+            File dir = new File(path).getParentFile();
             if (!dir.exists()) dir.mkdirs();
-
             FileOutputStream f = new FileOutputStream(path);
             f.write(content.getBytes());
             f.close();
         } catch (Exception e) {
-            Log.e(TAG, "Gagal menulis file: " + e.getMessage());
+            Log.e(TAG, "Write error: " + e.getMessage());
         }
     }
 
