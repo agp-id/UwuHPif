@@ -3,7 +3,6 @@
     package="com.uwuh.pif"
     android:sharedUserId="android.uid.system">
 
-    <!-- Permission Dasar System -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -14,7 +13,6 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.Settings">
 
-        <!-- Activity Utama agar Muncul di Launcher -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -25,7 +23,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Receiver Booting Completed -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -36,4 +33,5 @@
         </receiver>
 
     </application>
+
 </manifest>
