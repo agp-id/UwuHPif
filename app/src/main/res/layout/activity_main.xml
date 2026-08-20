@@ -141,23 +141,20 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ScrollView
+            <!-- EDITOR PIF - PAKAI EditText LANGSUNG DENGAN scrollbars -->
+            <EditText
+                android:id="@+id/etPifEditor"
                 android:layout_width="match_parent"
                 android:layout_height="150dp"
                 android:layout_marginTop="4dp"
-                android:background="#F5F5F5">
-
-                <EditText
-                    android:id="@+id/etPifEditor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top|start"
-                    android:padding="8dp"
-                    android:textSize="12sp"
-                    android:typeface="monospace"
-                    android:textColor="#000000"
-                    android:background="@null" />
-            </ScrollView>
+                android:background="#F5F5F5"
+                android:gravity="top|start"
+                android:padding="8dp"
+                android:textSize="12sp"
+                android:typeface="monospace"
+                android:textColor="#000000"
+                android:scrollbars="vertical"
+                android:overScrollMode="always" />
 
             <Button
                 android:id="@+id/btnApplyManual"
@@ -178,25 +175,21 @@
             android:text="GameProps Editor"
             android:textSize="14sp" />
 
-        <ScrollView
+        <!-- EDITOR GAMEPROPS - PAKAI EditText LANGSUNG -->
+        <EditText
+            android:id="@+id/etGameProps"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
             android:background="#F5F5F5"
-            android:visibility="gone"
-            android:id="@+id/scrollGameProps">
-
-            <EditText
-                android:id="@+id/etGameProps"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="top|start"
-                android:padding="8dp"
-                android:textSize="12sp"
-                android:typeface="monospace"
-                android:textColor="#000000"
-                android:background="@null" />
-        </ScrollView>
+            android:gravity="top|start"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textColor="#000000"
+            android:scrollbars="vertical"
+            android:overScrollMode="always"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -231,25 +224,21 @@
             android:text="Thermals Editor"
             android:textSize="14sp" />
 
-        <ScrollView
+        <!-- EDITOR THERMALS - PAKAI EditText LANGSUNG -->
+        <EditText
+            android:id="@+id/etThermals"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
             android:background="#F5F5F5"
-            android:visibility="gone"
-            android:id="@+id/scrollThermals">
-
-            <EditText
-                android:id="@+id/etThermals"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="top|start"
-                android:padding="8dp"
-                android:textSize="12sp"
-                android:typeface="monospace"
-                android:textColor="#000000"
-                android:background="@null" />
-        </ScrollView>
+            android:gravity="top|start"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textColor="#000000"
+            android:scrollbars="vertical"
+            android:overScrollMode="always"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -290,7 +279,7 @@
             android:layout_marginTop="16dp"
             android:background="#CCCCCC" />
 
-        <!-- ==================== LOG VIEWER (ALWAYS VISIBLE) ==================== -->
+        <!-- ==================== LOG VIEWER ==================== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -318,13 +307,16 @@
                 android:minHeight="0dp" />
         </LinearLayout>
 
+        <!-- LOG VIEWER - PAKAI TextView dengan ScrollView -->
         <ScrollView
             android:id="@+id/logScrollView"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
             android:background="#1A1A1A"
-            android:padding="4dp">
+            android:padding="4dp"
+            android:scrollbars="vertical"
+            android:overScrollMode="always">
 
             <TextView
                 android:id="@+id/tvLog"
