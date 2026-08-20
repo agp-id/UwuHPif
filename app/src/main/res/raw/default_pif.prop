@@ -1,7 +1,9 @@
-{
-  "MANUFACTURER": "Google",
-  "MODEL": "Pixel 8",
-  "FINGERPRINT": "google/husky/husky:14/UD1A.230803.022.B1/10836437:user/release-keys",
-  "SECURITY_PATCH": "2024-05-05",
-  "FIRST_API_LEVEL": "34"
-}
+MANUFACTURER=Google
+MODEL=Pixel 9 Pro
+FINGERPRINT=google/caiman_beta/caiman:CANARY/ZP11.260618.005/15760424:user/release-keys
+BRAND=google
+PRODUCT=caiman_beta
+DEVICE=caiman
+SECURITY_PATCH=2026-07-05
+DEVICE_INITIAL_SDK_INT=34
+spoofVendingSdk=false
