@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -13,19 +14,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="PIF Manager"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
-        <!-- ==================== TOGGLES ==================== -->
+        <!-- ==================== CONFIG TOGGLES ==================== -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="Konfigurasi"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
-        <!-- Toggle 1: Enable Bootloader -->
         <Switch
             android:id="@+id/switchBootloader"
             android:layout_width="match_parent"
@@ -34,7 +34,6 @@
             android:text="Enable Bootloader Spoof"
             android:textSize="14sp" />
 
-        <!-- Toggle 2: Enable PIF -->
         <Switch
             android:id="@+id/switchPIF"
             android:layout_width="match_parent"
@@ -43,7 +42,6 @@
             android:text="Enable PIF Spoof"
             android:textSize="14sp" />
 
-        <!-- Toggle 3: Spoof Provider (force custom) -->
         <Switch
             android:id="@+id/switchProvider"
             android:layout_width="match_parent"
@@ -52,13 +50,21 @@
             android:text="Force Custom Provider"
             android:textSize="14sp" />
 
-        <!-- ==================== GAMEPROPS & THERMALS ==================== -->
+        <Switch
+            android:id="@+id/switchDebug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Debug Mode"
+            android:textSize="14sp" />
+
+        <!-- ==================== ADDITIONAL FILES ==================== -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="Additional Files"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <Button
@@ -81,7 +87,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="Mode Auto"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <Switch
@@ -121,7 +127,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Mode Manual"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <Button
@@ -138,7 +144,6 @@
                 android:layout_marginTop="8dp"
                 android:text="Pilih PIF (.prop / .json)" />
 
-            <!-- Editor untuk cust_pif.prop -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -150,7 +155,7 @@
             <EditText
                 android:id="@+id/etPifEditor"
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
+                android:layout_height="150dp"
                 android:layout_marginTop="4dp"
                 android:background="#F5F5F5"
                 android:gravity="top|start"
@@ -163,8 +168,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="APPLY"
-                android:backgroundTint="#4CAF50" />
+                android:text="APPLY" />
 
         </LinearLayout>
 
@@ -174,8 +178,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Reset Persist Properties"
-            android:backgroundTint="#FF5722" />
+            android:text="Reset Persist Properties" />
 
         <!-- ==================== STATUS ==================== -->
         <TextView
@@ -186,14 +189,6 @@
             android:text="Ready"
             android:textSize="12sp"
             android:textColor="#555555" />
-
-<Switch
-    android:id="@+id/switchDebug"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:text="Debug Mode"
-    android:textSize="14sp" />
 
     </LinearLayout>
 </ScrollView>
