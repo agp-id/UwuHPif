@@ -22,11 +22,15 @@ public class BootReceiver extends BroadcastReceiver {
     private static final String DIR = "/data/system/uwuh";
     private static final String LOCAL_DIR = "/data/local/uwuh";
 
+    // ==================== PATHS YANG BENAR ====================
     private static final String KB_PATH = DIR + "/keybox.xml";
     private static final String PIF_PATH = DIR + "/pif.prop";
+    private static final String CUST_KB_PATH = DIR + "/cust_keybox.xml";
+    private static final String CUST_PIF_PATH = DIR + "/cust_pif.prop";
     private static final String GAMEPROPS_PATH = LOCAL_DIR + "/gameprops.json";
     private static final String THERMALS_PATH = LOCAL_DIR + "/per_app_thermals.json";
 
+    // ==================== URL UPDATE ====================
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
     private static final String URL_GAMEPROPS = "https://raw.githubusercontent.com/user/repo/main/gameprops.json";
@@ -41,6 +45,7 @@ public class BootReceiver extends BroadcastReceiver {
             new Thread(() -> {
                 createDirectories();
                 applyFallback(context);
+
                 if (isAuto) {
                     checkUpdateOnline(context, sp);
                 }
@@ -54,18 +59,25 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     private void applyFallback(Context context) {
+        // Keybox default
         if (!new File(KB_PATH).exists()) {
             String data = readRaw(context, R.raw.default_keybox);
             if (!data.isEmpty()) write(KB_PATH, data);
         }
+
+        // PIF default (.prop)
         if (!new File(PIF_PATH).exists()) {
             String data = readRaw(context, R.raw.default_pif);
             if (!data.isEmpty()) write(PIF_PATH, data);
         }
+
+        // GameProps
         if (!new File(GAMEPROPS_PATH).exists()) {
             String data = readRaw(context, R.raw.default_gameprops);
             if (!data.isEmpty()) write(GAMEPROPS_PATH, data);
         }
+
+        // Thermals
         if (!new File(THERMALS_PATH).exists()) {
             String data = readRaw(context, R.raw.default_thermals);
             if (!data.isEmpty()) write(THERMALS_PATH, data);
@@ -85,14 +97,17 @@ public class BootReceiver extends BroadcastReceiver {
                 write(KB_PATH, newKb);
                 updated = true;
             }
+
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
                 write(PIF_PATH, newPif);
                 updated = true;
             }
+
             if (newGame != null && !newGame.isEmpty() && !newGame.equals(readFile(GAMEPROPS_PATH))) {
                 write(GAMEPROPS_PATH, newGame);
                 updated = true;
             }
+
             if (newTherm != null && !newTherm.isEmpty() && !newTherm.equals(readFile(THERMALS_PATH))) {
                 write(THERMALS_PATH, newTherm);
                 updated = true;
@@ -110,6 +125,7 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     // ==================== UTILITY METHODS ====================
+
     private String fetch(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection c = (HttpURLConnection) url.openConnection();
@@ -132,6 +148,7 @@ public class BootReceiver extends BroadcastReceiver {
             FileOutputStream f = new FileOutputStream(path);
             f.write(content.getBytes());
             f.close();
+            Log.d(TAG, "Written: " + path);
         } catch (Exception e) {
             Log.e(TAG, "Write error: " + e.getMessage());
         }
