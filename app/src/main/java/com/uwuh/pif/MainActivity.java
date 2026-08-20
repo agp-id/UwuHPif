@@ -70,7 +70,7 @@ public class MainActivity extends Activity {
 
     private SharedPreferences sp;
     private Switch switchManual, switchBootloader, switchPIF, switchProvider, switchDebug;
-    private TextView tvStatus, tvLastUpdate, tvAutoStatus;
+    private TextView tvLastUpdate, tvAutoStatus;
     private TextView tvKeyboxLastApply, tvPifLastApply;
     private LinearLayout panelManual;
     private EditText etPifEditor, etGameProps, etThermals;
@@ -90,7 +90,6 @@ public class MainActivity extends Activity {
         switchPIF = findViewById(R.id.switchPIF);
         switchProvider = findViewById(R.id.switchProvider);
         switchDebug = findViewById(R.id.switchDebug);
-        tvStatus = findViewById(R.id.tvStatus);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         tvAutoStatus = findViewById(R.id.tvAutoStatus);
         tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
