@@ -84,7 +84,7 @@ public class MainActivity extends Activity {
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
         switchProvider = findViewById(R.id.switchProvider);
-        switchDebug = findViewById(R.id.switchDebug);
+        switchDebug = findViewById(R.id.switchDebug);  // ← SEKARANG DI BAWAH
         tvStatus = findViewById(R.id.tvStatus);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         panelManual = findViewById(R.id.panelManual);
@@ -106,7 +106,7 @@ public class MainActivity extends Activity {
         switchPIF.setChecked(SystemPropertiesHelper.getBoolean(PROP_PIF, true));
         switchProvider.setChecked(SystemPropertiesHelper.getBoolean(PROP_USE_CUSTOM, false));
         
-        // Debug mode
+        // Debug mode (sekarang di bawah)
         isDebugMode = SystemPropertiesHelper.getBoolean(PROP_DEBUG, false);
         switchDebug.setChecked(isDebugMode);
         updateDebugUI(isDebugMode);
@@ -138,6 +138,7 @@ public class MainActivity extends Activity {
             if (checked) forceReloadPIF();
         });
 
+        // ==================== SWITCH DEBUG (PALING BAWAH) ====================
         switchDebug.setOnCheckedChangeListener((v, checked) -> {
             SystemPropertiesHelper.set(PROP_DEBUG, checked ? "true" : "false");
             isDebugMode = checked;
@@ -204,21 +205,17 @@ public class MainActivity extends Activity {
         String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
         String logMsg = "[" + timestamp + "] " + msg;
         
-        // Trim to max 10 lines
         if (logLines.size() >= MAX_LOG_LINES) {
             logLines.removeFirst();
         }
         logLines.add(logMsg);
         
-        // Update UI
         mainHandler.post(() -> {
             StringBuilder sb = new StringBuilder();
             for (String line : logLines) {
                 sb.append(line).append("\n");
             }
             tvLog.setText(sb.toString());
-            
-            // Auto scroll to bottom
             logScrollView.post(() -> logScrollView.fullScroll(ScrollView.FOCUS_DOWN));
         });
     }
