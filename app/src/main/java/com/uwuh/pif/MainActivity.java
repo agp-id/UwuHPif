@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -66,6 +65,7 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
+        // Init views
         switchAuto = findViewById(R.id.switchAuto);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
         switchAuto.setChecked(isAuto);
         updateUIState(isAuto);
 
-        // Gunakan SystemPropertiesHelper
+        // Load persist states
         switchBootloader.setChecked(SystemPropertiesHelper.getBoolean(PROP_BOOTLOADER, true));
         switchPIF.setChecked(SystemPropertiesHelper.getBoolean(PROP_PIF, true));
         switchProvider.setChecked(SystemPropertiesHelper.getBoolean(PROP_USE_CUSTOM, false));
@@ -106,12 +106,8 @@ public class MainActivity extends Activity {
 
         switchProvider.setOnCheckedChangeListener((v, checked) -> {
             SystemPropertiesHelper.set(PROP_USE_CUSTOM, checked ? "true" : "false");
-            if (checked) {
-                setStatus("Custom provider: FORCED");
-                forceReloadPIF();
-            } else {
-                setStatus("Custom provider: DEFAULT");
-            }
+            setStatus("Custom: " + (checked ? "ON" : "OFF"));
+            if (checked) forceReloadPIF();
         });
 
         switchDebug.setOnCheckedChangeListener((v, checked) -> {
@@ -119,13 +115,13 @@ public class MainActivity extends Activity {
             setStatus("Debug: " + (checked ? "ON" : "OFF"));
         });
 
+        // Buttons
         btnUpdate.setOnClickListener(v -> new Thread(() -> checkUpdateOnline(true)).start());
 
-        findViewById(R.id.btnLoadGameProps).setOnClickListener(v -> pickFileForLoad(GAMEPROPS_PATH, "gameprops.json"));
-        findViewById(R.id.btnLoadThermals).setOnClickListener(v -> pickFileForLoad(THERMALS_PATH, "per_app_thermals.json"));
+        findViewById(R.id.btnLoadGameProps).setOnClickListener(v -> pickFile(201));
+        findViewById(R.id.btnLoadThermals).setOnClickListener(v -> pickFile(202));
         findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile(101));
         findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile(102));
-
         btnApplyManual.setOnClickListener(v -> applyManualPIF());
         findViewById(R.id.btnResetPersist).setOnClickListener(v -> resetPersistProps());
 
@@ -139,8 +135,6 @@ public class MainActivity extends Activity {
             }
         }).start();
     }
-
-    // ==================== UI HELPERS ====================
 
     private void updateUIState(boolean isAuto) {
         panelManual.setVisibility(isAuto ? View.GONE : View.VISIBLE);
@@ -158,39 +152,30 @@ public class MainActivity extends Activity {
         String content = readFile(CUST_PIF_PATH);
         if (content != null && !content.isEmpty()) {
             etPifEditor.setText(content);
-            importedPifContent = content;
         } else {
-            etPifEditor.setText("# No custom PIF loaded\n# Import .prop or .json file");
+            etPifEditor.setText("# No custom PIF loaded");
         }
     }
-
-    // ==================== DIRECTORY CREATION ====================
 
     private void createDirectories() {
         new File(DIR).mkdirs();
         new File(LOCAL_DIR).mkdirs();
     }
 
-    // ==================== FALLBACK ====================
-
     private void applyFallback() {
         try {
-            // Keybox
             if (!new File(KB_PATH).exists()) {
-                String kbData = readRaw(R.raw.default_keybox);
-                if (!kbData.isEmpty()) write(KB_PATH, kbData);
+                String data = readRaw(R.raw.default_keybox);
+                if (!data.isEmpty()) write(KB_PATH, data);
             }
-            // PIF
             if (!new File(PIF_PATH).exists()) {
-                String pifData = readRaw(R.raw.default_pif);
-                if (!pifData.isEmpty()) write(PIF_PATH, pifData);
+                String data = readRaw(R.raw.default_pif);
+                if (!data.isEmpty()) write(PIF_PATH, data);
             }
-            // GameProps
             if (!new File(GAMEPROPS_PATH).exists()) {
                 String data = readRaw(R.raw.default_gameprops);
                 if (!data.isEmpty()) write(GAMEPROPS_PATH, data);
             }
-            // Thermals
             if (!new File(THERMALS_PATH).exists()) {
                 String data = readRaw(R.raw.default_thermals);
                 if (!data.isEmpty()) write(THERMALS_PATH, data);
@@ -199,8 +184,6 @@ public class MainActivity extends Activity {
             Log.e(TAG, "Fallback error: " + e.getMessage());
         }
     }
-
-    // ==================== UPDATE ONLINE ====================
 
     private void checkUpdateOnline(boolean showToast) {
         try {
@@ -212,20 +195,16 @@ public class MainActivity extends Activity {
             boolean updated = false;
 
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
-                write(KB_PATH, newKb);
-                updated = true;
+                write(KB_PATH, newKb); updated = true;
             }
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
-                write(PIF_PATH, newPif);
-                updated = true;
+                write(PIF_PATH, newPif); updated = true;
             }
             if (newGame != null && !newGame.isEmpty() && !newGame.equals(readFile(GAMEPROPS_PATH))) {
-                write(GAMEPROPS_PATH, newGame);
-                updated = true;
+                write(GAMEPROPS_PATH, newGame); updated = true;
             }
             if (newTherm != null && !newTherm.isEmpty() && !newTherm.equals(readFile(THERMALS_PATH))) {
-                write(THERMALS_PATH, newTherm);
-                updated = true;
+                write(THERMALS_PATH, newTherm); updated = true;
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
@@ -239,21 +218,16 @@ public class MainActivity extends Activity {
                 setStatus("Update completed");
             });
 
-            // Kill GMS and Vending after update
-            if (updated) {
-                killGMSAndVending();
-            }
+            if (updated) killGMSAndVending();
 
         } catch (Exception e) {
             Log.e(TAG, "Update error: " + e.getMessage());
             runOnUiThread(() -> {
-                if (showToast) Toast.makeText(this, "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (showToast) Toast.makeText(this, "Update failed", Toast.LENGTH_SHORT).show();
                 setStatus("Update failed");
             });
         }
     }
-
-    // ==================== MANUAL PIF ====================
 
     private void applyManualPIF() {
         String content = etPifEditor.getText().toString().trim();
@@ -262,69 +236,47 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Convert JSON to .prop if needed
-        String finalContent = content;
         if (content.trim().startsWith("{")) {
-            finalContent = convertJsonToProp(content);
-            etPifEditor.setText(finalContent);
+            content = convertJsonToProp(content);
+            etPifEditor.setText(content);
         }
 
-        write(CUST_PIF_PATH, finalContent);
-        importedPifContent = finalContent;
-        
-        // If provider toggle is ON, force reload
-        if (switchProvider.isChecked()) {
-            forceReloadPIF();
-        }
-        
+        write(CUST_PIF_PATH, content);
         Toast.makeText(this, "Custom PIF applied!", Toast.LENGTH_SHORT).show();
         setStatus("Manual PIF applied");
+        if (switchProvider.isChecked()) forceReloadPIF();
         killGMSAndVending();
     }
 
     private String convertJsonToProp(String json) {
-        // Simple JSON to .prop converter
-        String result = "";
         try {
-            org.json.JSONObject obj = new org.json.JSONObject(json);
+            JSONObject obj = new JSONObject(json);
             String[] keys = {"MANUFACTURER", "MODEL", "FINGERPRINT", "BRAND", "PRODUCT", "DEVICE", "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"};
+            StringBuilder result = new StringBuilder();
             for (String key : keys) {
                 if (obj.has(key)) {
-                    String val = obj.getString(key);
-                    result += key + "=" + val + "\n";
+                    result.append(key).append("=").append(obj.getString(key)).append("\n");
                 }
             }
             if (obj.has("spoofVendingSdk")) {
-                result += "spoofVendingSdk=" + obj.getString("spoofVendingSdk") + "\n";
+                result.append("spoofVendingSdk=").append(obj.getString("spoofVendingSdk")).append("\n");
             }
+            return result.toString();
         } catch (Exception e) {
-            Log.e(TAG, "JSON conversion error: " + e.getMessage());
             return json;
         }
-        return result;
     }
 
     private void forceReloadPIF() {
-        // Trigger reload by touching the file
         File f = new File(CUST_PIF_PATH);
-        if (f.exists()) {
-            f.setLastModified(System.currentTimeMillis());
-        }
-        setStatus("Custom PIF forced reload");
+        if (f.exists()) f.setLastModified(System.currentTimeMillis());
+        setStatus("Custom PIF reloaded");
     }
-
-    // ==================== PICK FILE ====================
 
     private void pickFile(int requestCode) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("*/*");
         startActivityForResult(intent, requestCode);
-    }
-
-    private void pickFileForLoad(String destPath, String fileName, String url) {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
-        startActivityForResult(intent, 200 + (int)System.currentTimeMillis() % 100);
     }
 
     @Override
@@ -333,96 +285,62 @@ public class MainActivity extends Activity {
         if (res == Activity.RESULT_OK && data != null && data.getData() != null) {
             new Thread(() -> {
                 String content = readUri(data.getData());
-                if (!content.isEmpty()) {
-                    if (req == 101) {
-                        write(CUST_KB_PATH, content);
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "Custom Keybox saved", Toast.LENGTH_SHORT).show();
-                            setStatus("Custom Keybox applied");
-                        });
-                    } else if (req == 102) {
-                        // Detect if JSON or PROP
-                        if (content.trim().startsWith("{")) {
-                            content = convertJsonToProp(content);
-                        }
-                        write(CUST_PIF_PATH, content);
-                        runOnUiThread(() -> {
-                            etPifEditor.setText(content);
-                            importedPifContent = content;
-                            Toast.makeText(this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
-                            setStatus("Custom PIF imported");
-                            if (switchProvider.isChecked()) {
-                                forceReloadPIF();
-                            }
-                        });
-                        killGMSAndVending();
-                    } else {
-                        // GameProps or Thermals
-                        String dest = (req % 2 == 0) ? GAMEPROPS_PATH : THERMALS_PATH;
-                        write(dest, content);
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "File saved to " + dest, Toast.LENGTH_SHORT).show();
-                            setStatus("File loaded");
-                        });
-                    }
+                if (content.isEmpty()) return;
+
+                if (req == 101) {
+                    write(CUST_KB_PATH, content);
+                    runOnUiThread(() -> Toast.makeText(this, "Custom Keybox saved", Toast.LENGTH_SHORT).show());
+                } else if (req == 102) {
+                    if (content.trim().startsWith("{")) content = convertJsonToProp(content);
+                    write(CUST_PIF_PATH, content);
+                    runOnUiThread(() -> {
+                        etPifEditor.setText(content);
+                        Toast.makeText(this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
+                        if (switchProvider.isChecked()) forceReloadPIF();
+                    });
+                    killGMSAndVending();
+                } else if (req == 201) {
+                    write(GAMEPROPS_PATH, content);
+                    runOnUiThread(() -> Toast.makeText(this, "GameProps saved", Toast.LENGTH_SHORT).show());
+                } else if (req == 202) {
+                    write(THERMALS_PATH, content);
+                    runOnUiThread(() -> Toast.makeText(this, "Thermals saved", Toast.LENGTH_SHORT).show());
                 }
             }).start();
         }
     }
 
-    // ==================== RESET PERSIST ====================
-
     private void resetPersistProps() {
-        try {
-            SystemProperties.set(PROP_BOOTLOADER, "true");
-            SystemProperties.set(PROP_PIF, "true");
-            SystemProperties.set(PROP_USE_CUSTOM, "false");
-            
-            runOnUiThread(() -> {
-                switchBootloader.setChecked(true);
-                switchPIF.setChecked(true);
-                switchProvider.setChecked(false);
-                Toast.makeText(this, "Persist props reset to default", Toast.LENGTH_SHORT).show();
-                setStatus("Persist reset");
-            });
-        } catch (Exception e) {
-            Log.e(TAG, "Reset error: " + e.getMessage());
-            runOnUiThread(() -> Toast.makeText(this, "Reset failed", Toast.LENGTH_SHORT).show());
-        }
-    }
+        SystemPropertiesHelper.set(PROP_BOOTLOADER, "true");
+        SystemPropertiesHelper.set(PROP_PIF, "true");
+        SystemPropertiesHelper.set(PROP_USE_CUSTOM, "false");
+        SystemPropertiesHelper.set(PROP_DEBUG, "false");
 
-    // ==================== KILL GMS & VENDING ====================
+        runOnUiThread(() -> {
+            switchBootloader.setChecked(true);
+            switchPIF.setChecked(true);
+            switchProvider.setChecked(false);
+            switchDebug.setChecked(false);
+            Toast.makeText(this, "Persist props reset", Toast.LENGTH_SHORT).show();
+            setStatus("Persist reset");
+        });
+    }
 
     private void killGMSAndVending() {
         try {
             ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            
-            // Kill GMS
             try {
                 Method forceStop = ActivityManager.class.getDeclaredMethod("forceStopPackage", String.class);
                 forceStop.setAccessible(true);
                 forceStop.invoke(am, "com.google.android.gms");
-                Log.d(TAG, "GMS killed");
-            } catch (Exception e) {
-                Log.e(TAG, "Force stop GMS failed: " + e.getMessage());
-                am.killBackgroundProcesses("com.google.android.gms");
-            }
-            
-            // Kill Vending (Play Store)
-            try {
-                Method forceStop = ActivityManager.class.getDeclaredMethod("forceStopPackage", String.class);
-                forceStop.setAccessible(true);
                 forceStop.invoke(am, "com.android.vending");
-                Log.d(TAG, "Vending killed");
+                Log.d(TAG, "GMS & Vending killed");
             } catch (Exception e) {
-                Log.e(TAG, "Force stop Vending failed: " + e.getMessage());
+                am.killBackgroundProcesses("com.google.android.gms");
                 am.killBackgroundProcesses("com.android.vending");
             }
-            
-            runOnUiThread(() -> Toast.makeText(this, "GMS & Vending restarted", Toast.LENGTH_SHORT).show());
-            
         } catch (Exception e) {
-            Log.e(TAG, "Kill process error: " + e.getMessage());
+            Log.e(TAG, "Kill error: " + e.getMessage());
         }
     }
 
@@ -481,7 +399,6 @@ public class MainActivity extends Activity {
             r.close();
             return sb.toString().trim();
         } catch (Exception e) {
-            Log.e(TAG, "Raw resource error: " + e.getMessage());
             return "";
         }
     }
