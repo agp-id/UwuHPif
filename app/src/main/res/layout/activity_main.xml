@@ -141,7 +141,6 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <!-- EDITOR PIF - PAKAI EditText LANGSUNG DENGAN scrollbars -->
             <EditText
                 android:id="@+id/etPifEditor"
                 android:layout_width="match_parent"
@@ -153,8 +152,10 @@
                 android:textSize="12sp"
                 android:typeface="monospace"
                 android:textColor="#000000"
+                android:inputType="textMultiLine"
                 android:scrollbars="vertical"
-                android:overScrollMode="always" />
+                android:overScrollMode="always"
+                android:isScrollContainer="true" />
 
             <Button
                 android:id="@+id/btnApplyManual"
@@ -172,24 +173,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="GameProps Editor"
+            android:text="Enable GameProps"
             android:textSize="14sp" />
-
-        <!-- EDITOR GAMEPROPS - PAKAI EditText LANGSUNG -->
-        <EditText
-            android:id="@+id/etGameProps"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="4dp"
-            android:background="#F5F5F5"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:textSize="12sp"
-            android:typeface="monospace"
-            android:textColor="#000000"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"
-            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -204,7 +189,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Save"
+                android:text="Edit"
                 android:enabled="false" />
 
             <Button
@@ -215,18 +200,8 @@
                 android:layout_marginLeft="4dp" />
         </LinearLayout>
 
-        <!-- ==================== EDITOR: THERMALS ==================== -->
-        <Switch
-            android:id="@+id/switchThermals"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Thermals Editor"
-            android:textSize="14sp" />
-
-        <!-- EDITOR THERMALS - PAKAI EditText LANGSUNG -->
         <EditText
-            android:id="@+id/etThermals"
+            android:id="@+id/etGameProps"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
@@ -236,9 +211,20 @@
             android:textSize="12sp"
             android:typeface="monospace"
             android:textColor="#000000"
+            android:inputType="textMultiLine"
             android:scrollbars="vertical"
             android:overScrollMode="always"
+            android:isScrollContainer="true"
             android:visibility="gone" />
+
+        <!-- ==================== EDITOR: THERMALS ==================== -->
+        <Switch
+            android:id="@+id/switchThermals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Enable Thermals"
+            android:textSize="14sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -253,7 +239,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Save"
+                android:text="Edit"
                 android:enabled="false" />
 
             <Button
@@ -263,6 +249,23 @@
                 android:text="Reset Config"
                 android:layout_marginLeft="4dp" />
         </LinearLayout>
+
+        <EditText
+            android:id="@+id/etThermals"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="4dp"
+            android:background="#F5F5F5"
+            android:gravity="top|start"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textColor="#000000"
+            android:inputType="textMultiLine"
+            android:scrollbars="vertical"
+            android:overScrollMode="always"
+            android:isScrollContainer="true"
+            android:visibility="gone" />
 
         <!-- ==================== RESET ==================== -->
         <Button
@@ -290,7 +293,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="=== Debug Log ==="
+                android:text="=== Log ==="
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -304,31 +307,27 @@
                 android:paddingBottom="2dp"
                 android:paddingLeft="6dp"
                 android:paddingRight="6dp"
-                android:minHeight="0dp" />
+                android:minHeight="4dp" />
         </LinearLayout>
 
-        <!-- LOG VIEWER - PAKAI TextView dengan ScrollView -->
-        <ScrollView
-            android:id="@+id/logScrollView"
+        <EditText
+            android:id="@+id/tvLog"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
             android:background="#1A1A1A"
-            android:padding="4dp"
+            android:padding="8dp"
+            android:text="[Log ready]"
+            android:textColor="#00FF00"
+            android:textSize="10sp"
+            android:typeface="monospace"
+            android:inputType="textMultiLine"
             android:scrollbars="vertical"
-            android:overScrollMode="always">
-
-            <TextView
-                android:id="@+id/tvLog"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="[Log ready]"
-                android:textColor="#00FF00"
-                android:textSize="10sp"
-                android:typeface="monospace"
-                android:textIsSelectable="true" />
-
-        </ScrollView>
+            android:overScrollMode="always"
+            android:isScrollContainer="true"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:textIsSelectable="true" />
 
     </LinearLayout>
 </ScrollView>
