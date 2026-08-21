@@ -33,14 +33,6 @@
             android:text="Enable PIF Spoof"
             android:textSize="14sp" />
 
-        <Switch
-            android:id="@+id/switchProvider"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Force Custom Provider"
-            android:textSize="14sp" />
-
         <!-- ==================== MODE ==================== -->
         <TextView
             android:layout_width="wrap_content"
@@ -176,7 +168,6 @@
             android:text="Enable GameProps"
             android:textSize="14sp" />
 
-        <!-- Textbox dipindah di atas Tombol -->
         <EditText
             android:id="@+id/etGameProps"
             android:layout_width="match_parent"
@@ -227,7 +218,6 @@
             android:text="Enable Thermals"
             android:textSize="14sp" />
 
-        <!-- Textbox dipindah di atas Tombol -->
         <EditText
             android:id="@+id/etThermals"
             android:layout_width="match_parent"
