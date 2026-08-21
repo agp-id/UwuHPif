@@ -330,9 +330,7 @@
             android:inputType="textMultiLine"
             android:scrollbars="vertical"
             android:overScrollMode="always"
-            android:isScrollContainer="true"
-            android:editable="false"
-            android:cursorVisible="false" />
+            android:isScrollContainer="true" />
 
     </LinearLayout>
 </ScrollView>
