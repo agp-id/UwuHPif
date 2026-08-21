@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -283,37 +282,40 @@
             android:layout_marginTop="16dp"
             android:background="#CCCCCC" />
 
-        <!-- ==================== LOG VIEWER ==================== -->
+        <!-- ==================== LOG VIEWER HEADER ==================== -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:layout_marginTop="12dp">
 
             <TextView
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="=== Log ==="
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
             <Button
-    android:id="@+id/btnCopyLog"
-    style="?android:attr/buttonStyleSmall"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="Copy"
-    android:textSize="11sp"
-    android:paddingLeft="12dp"
-    android:paddingRight="12dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
-    android:minHeight="0dp"
-    android:minWidth="0dp" />
+                android:id="@+id/btnCopyLog"
+                style="?android:attr/buttonStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Copy"
+                android:textSize="11sp"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp" />
         </LinearLayout>
 
+        <!-- ==================== LOG VIEWER TEXTBOX ==================== -->
         <EditText
             android:id="@+id/tvLog"
             android:layout_width="match_parent"
@@ -329,9 +331,8 @@
             android:scrollbars="vertical"
             android:overScrollMode="always"
             android:isScrollContainer="true"
-            android:focusable="false"
-            android:focusableInTouchMode="false"
-            android:textIsSelectable="true" />
+            android:editable="false"
+            android:cursorVisible="false" />
 
     </LinearLayout>
 </ScrollView>
