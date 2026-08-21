@@ -21,11 +21,14 @@
         android:text="Tampilkan System App"
         android:textSize="13sp" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvAppList"
+    <!-- Menggunakan ListView Bawaan Framework -->
+    <ListView
+        android:id="@+id/lvAppList"
         android:layout_width="match_parent"
         android:layout_height="350dp"
-        android:layout_marginTop="8dp" />
+        android:layout_marginTop="8dp"
+        android:divider="#DDDDDD"
+        android:dividerHeight="1dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
