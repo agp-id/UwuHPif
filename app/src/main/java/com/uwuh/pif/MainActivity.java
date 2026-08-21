@@ -15,7 +15,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -56,13 +55,11 @@ public class MainActivity extends Activity {
     private static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
     private static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
     private static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
-    private static final String PROP_DEBUG = "persist.sys.oemports10t.utils-debug";
     
     // ==================== LOG VIEWER ====================
     private static final int MAX_LOG_LINES = 10;
     private LinkedList<String> logLines = new LinkedList<>();
-    private TextView tvLog;
-    private ScrollView logScrollView;
+    private EditText tvLog;
     private Button btnCopyLog;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -75,6 +72,8 @@ public class MainActivity extends Activity {
     private EditText etPifEditor, etGameProps, etThermals;
     private Button btnUpdate, btnApplyManual, btnGameProps, btnThermals;
     private Button btnResetGameProps, btnResetThermals;
+    private boolean gamePropsVisible = false;
+    private boolean thermalsVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,7 +82,7 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
-        // Init views - HAPUS scrollGameProps dan scrollThermals
+        // Init views
         switchManual = findViewById(R.id.switchManual);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
@@ -107,9 +106,8 @@ public class MainActivity extends Activity {
         btnResetGameProps = findViewById(R.id.btnResetGameProps);
         btnResetThermals = findViewById(R.id.btnResetThermals);
 
-        // Log viewer
+        // Log viewer - sekarang EditText
         tvLog = findViewById(R.id.tvLog);
-        logScrollView = findViewById(R.id.logScrollView);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
         // Load states
@@ -126,7 +124,9 @@ public class MainActivity extends Activity {
         tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
         tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
 
-        // Load editors
+        // Load editors - disable save buttons initially
+        btnGameProps.setEnabled(false);
+        btnThermals.setEnabled(false);
         loadGameProps();
         loadThermals();
         loadCustomPIF();
@@ -157,22 +157,36 @@ public class MainActivity extends Activity {
 
         switchGameProps.setOnCheckedChangeListener((v, checked) -> {
             int vis = checked ? View.VISIBLE : View.GONE;
-            etGameProps.setVisibility(vis);
             panelGamePropsBtn.setVisibility(vis);
             if (checked) {
                 loadGameProps();
+                btnGameProps.setText("Edit");
+                gamePropsVisible = false;
+                etGameProps.setVisibility(View.GONE);
+                addLog("GameProps enabled");
+            } else {
+                etGameProps.setVisibility(View.GONE);
+                gamePropsVisible = false;
+                btnGameProps.setText("Edit");
+                addLog("GameProps disabled");
             }
-            addLog("GameProps: " + (checked ? "ON" : "OFF"));
         });
 
         switchThermals.setOnCheckedChangeListener((v, checked) -> {
             int vis = checked ? View.VISIBLE : View.GONE;
-            etThermals.setVisibility(vis);
             panelThermalsBtn.setVisibility(vis);
             if (checked) {
                 loadThermals();
+                btnThermals.setText("Edit");
+                thermalsVisible = false;
+                etThermals.setVisibility(View.GONE);
+                addLog("Thermals enabled");
+            } else {
+                etThermals.setVisibility(View.GONE);
+                thermalsVisible = false;
+                btnThermals.setText("Edit");
+                addLog("Thermals disabled");
             }
-            addLog("Thermals: " + (checked ? "ON" : "OFF"));
         });
 
         // ==================== BUTTON LISTENERS ====================
@@ -184,8 +198,8 @@ public class MainActivity extends Activity {
 
         btnCopyLog.setOnClickListener(v -> copyLog());
 
-        btnGameProps.setOnClickListener(v -> saveGameProps());
-        btnThermals.setOnClickListener(v -> saveThermals());
+        btnGameProps.setOnClickListener(v -> toggleGameProps());
+        btnThermals.setOnClickListener(v -> toggleThermals());
         btnResetGameProps.setOnClickListener(v -> resetGameProps());
         btnResetThermals.setOnClickListener(v -> resetThermals());
         
@@ -261,10 +275,35 @@ public class MainActivity extends Activity {
         String content = editor.getText().toString().trim();
         boolean valid = isJson ? validateJson(content) : validateProp(content);
         btn.setEnabled(valid);
-        if (!valid && !content.isEmpty() && !content.startsWith("#") && !content.startsWith("{")) {
-            btn.setText("Error: Invalid");
+    }
+
+    // ==================== EDITOR TOGGLES ====================
+
+    private void toggleGameProps() {
+        if (!switchGameProps.isChecked()) return;
+        
+        gamePropsVisible = !gamePropsVisible;
+        etGameProps.setVisibility(gamePropsVisible ? View.VISIBLE : View.GONE);
+        btnGameProps.setText(gamePropsVisible ? "Apply" : "Edit");
+        if (gamePropsVisible) {
+            loadGameProps();
+            updateApplyButton(btnGameProps, etGameProps, true);
         } else {
-            btn.setText("Save");
+            saveGameProps();
+        }
+    }
+
+    private void toggleThermals() {
+        if (!switchThermals.isChecked()) return;
+        
+        thermalsVisible = !thermalsVisible;
+        etThermals.setVisibility(thermalsVisible ? View.VISIBLE : View.GONE);
+        btnThermals.setText(thermalsVisible ? "Apply" : "Edit");
+        if (thermalsVisible) {
+            loadThermals();
+            updateApplyButton(btnThermals, etThermals, true);
+        } else {
+            saveThermals();
         }
     }
 
@@ -274,11 +313,10 @@ public class MainActivity extends Activity {
         String content = readFile(GAMEPROPS_PATH);
         if (content != null && !content.isEmpty()) {
             etGameProps.setText(content);
-            updateApplyButton(btnGameProps, etGameProps, true);
         } else {
             etGameProps.setText("{\n    \"device1\": {\n        \"PKGNAMES\": [],\n        \"MANUFACTURER\": \"\",\n        \"MODEL\": \"\"\n    }\n}");
-            btnGameProps.setEnabled(false);
         }
+        updateApplyButton(btnGameProps, etGameProps, true);
     }
 
     private void saveGameProps() {
@@ -295,7 +333,8 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
             addLog("GameProps: Invalid JSON");
         }
-        loadGameProps();
+        // Reload to refresh validation
+        updateApplyButton(btnGameProps, etGameProps, true);
     }
 
     private void resetGameProps() {
@@ -317,11 +356,10 @@ public class MainActivity extends Activity {
         String content = readFile(THERMALS_PATH);
         if (content != null && !content.isEmpty()) {
             etThermals.setText(content);
-            updateApplyButton(btnThermals, etThermals, true);
         } else {
             etThermals.setText("{\n    \"DEFAULT\": \"0\",\n    \"1\": {\n        \"PKGNAMES\": [],\n        \"THERMAL_PROFILE\": \"\"\n    }\n}");
-            btnThermals.setEnabled(false);
         }
+        updateApplyButton(btnThermals, etThermals, true);
     }
 
     private void saveThermals() {
@@ -338,7 +376,7 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
             addLog("Thermals: Invalid JSON");
         }
-        loadThermals();
+        updateApplyButton(btnThermals, etThermals, true);
     }
 
     private void resetThermals() {
@@ -382,7 +420,8 @@ public class MainActivity extends Activity {
                 sb.append(line).append("\n");
             }
             tvLog.setText(sb.toString());
-            logScrollView.post(() -> logScrollView.fullScroll(ScrollView.FOCUS_DOWN));
+            // Auto scroll to bottom
+            tvLog.setSelection(tvLog.getText().length());
         });
     }
 
@@ -645,7 +684,6 @@ public class MainActivity extends Activity {
         SystemPropertiesHelper.set(PROP_BOOTLOADER, "true");
         SystemPropertiesHelper.set(PROP_PIF, "true");
         SystemPropertiesHelper.set(PROP_USE_CUSTOM, "false");
-        SystemPropertiesHelper.set(PROP_DEBUG, "false");
 
         addLog("Configuration reset");
         runOnUiThread(() -> {
