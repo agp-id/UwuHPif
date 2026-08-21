@@ -113,7 +113,13 @@ public class MainActivity extends Activity {
         tvLog = findViewById(R.id.tvLog);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
-        // Aktifkan movement method khusus scroll untuk Log
+        // KUNCI TOTAL LOG (Read-Only: Matikan keyboard, kursor, dan aksi edit)
+        tvLog.setFocusable(false);
+        tvLog.setFocusableInTouchMode(false);
+        tvLog.setLongClickable(false);
+        tvLog.setKeyListener(null);
+
+        // Aktifkan scroll mesin bawaan & gesture scroll khusus log
         tvLog.setMovementMethod(new ScrollingMovementMethod());
 
         // Enable inner scroll untuk semua EditText agar ScrollView utama tidak mencegat gesture
@@ -444,7 +450,6 @@ public class MainActivity extends Activity {
                 sb.append(line).append("\n");
             }
             tvLog.setText(sb.toString());
-            tvLog.setSelection(tvLog.getText().length());
         });
     }
 
