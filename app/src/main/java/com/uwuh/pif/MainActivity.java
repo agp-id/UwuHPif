@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.method.ScrollingMovementMethod;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -59,7 +60,7 @@ public class MainActivity extends Activity {
     private static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
     
     // ==================== LOG VIEWER ====================
-    private static final int MAX_LOG_LINES = 10;
+    private static final int MAX_LOG_LINES = 20;
     private LinkedList<String> logLines = new LinkedList<>();
     private EditText tvLog;
     private Button btnCopyLog;
@@ -112,7 +113,10 @@ public class MainActivity extends Activity {
         tvLog = findViewById(R.id.tvLog);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
-        // Aktifkan scroll di dalam ScrollView untuk semua EditText
+        // Aktifkan movement method khusus scroll untuk Log
+        tvLog.setMovementMethod(new ScrollingMovementMethod());
+
+        // Enable inner scroll untuk semua EditText agar ScrollView utama tidak mencegat gesture
         enableInnerScroll(etPifEditor);
         enableInnerScroll(etGameProps);
         enableInnerScroll(etThermals);
@@ -240,18 +244,14 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // Helper untuk mencegah ScrollView mencegat (intercept) touch event saat EditText di-scroll
+    // Helper untuk mencegah ScrollView mencegat touch event saat EditText disentuh/di-scroll
     @SuppressLint("ClickableViewAccessibility")
     private void enableInnerScroll(EditText editText) {
         editText.setOnTouchListener((v, event) -> {
-            if (editText.hasFocus()) {
-                v.getParent().requestDisallowInterceptTouchEvent(true);
-                switch (event.getAction() & MotionEvent.ACTION_MASK) {
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        v.getParent().requestDisallowInterceptTouchEvent(false);
-                        break;
-                }
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP ||
+                (event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_CANCEL) {
+                v.getParent().requestDisallowInterceptTouchEvent(false);
             }
             return false;
         });
