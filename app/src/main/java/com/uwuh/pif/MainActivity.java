@@ -59,6 +59,8 @@ public class MainActivity extends Activity {
     private static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
     private static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
     private static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
+    private static final String PROP_THERMALS = "persist.sys.oemports10t.utils.perapp_thermals";
+    private static final String PROP_GAMEPROPS = "persist.sys.oemports10t.utils.gameprops";
     
     // ==================== LOG VIEWER ====================
     private static final int MAX_LOG_LINES = 20;
@@ -68,7 +70,7 @@ public class MainActivity extends Activity {
     private Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private SharedPreferences sp;
-    private Switch switchManual, switchBootloader, switchPIF, switchProvider;
+    private Switch switchManual, switchBootloader, switchPIF;
     private Switch switchGameProps, switchThermals;
     private TextView tvLastUpdate, tvAutoStatus;
     private TextView tvKeyboxLastApply, tvPifLastApply;
@@ -90,7 +92,6 @@ public class MainActivity extends Activity {
         switchManual = findViewById(R.id.switchManual);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
-        switchProvider = findViewById(R.id.switchProvider);
         switchGameProps = findViewById(R.id.switchGameProps);
         switchThermals = findViewById(R.id.switchThermals);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
@@ -110,20 +111,16 @@ public class MainActivity extends Activity {
         btnResetGameProps = findViewById(R.id.btnResetGameProps);
         btnResetThermals = findViewById(R.id.btnResetThermals);
 
-        // Log viewer - EditText
+        // Log viewer - EditText (Read-Only)
         tvLog = findViewById(R.id.tvLog);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
-        // KUNCI TOTAL LOG (Read-Only: Matikan keyboard, kursor, dan aksi edit)
         tvLog.setFocusable(false);
         tvLog.setFocusableInTouchMode(false);
         tvLog.setLongClickable(false);
         tvLog.setKeyListener(null);
-
-        // Aktifkan scroll mesin bawaan & gesture scroll khusus log
         tvLog.setMovementMethod(new ScrollingMovementMethod());
 
-        // Enable inner scroll untuk semua EditText agar ScrollView utama tidak mencegat gesture
         enableInnerScroll(etPifEditor);
         enableInnerScroll(etGameProps);
         enableInnerScroll(etThermals);
@@ -137,13 +134,14 @@ public class MainActivity extends Activity {
         // Load persist states
         switchBootloader.setChecked(SystemPropertiesHelper.getBoolean(PROP_BOOTLOADER, true));
         switchPIF.setChecked(SystemPropertiesHelper.getBoolean(PROP_PIF, true));
-        switchProvider.setChecked(SystemPropertiesHelper.getBoolean(PROP_USE_CUSTOM, false));
+        switchGameProps.setChecked(SystemPropertiesHelper.getBoolean(PROP_GAMEPROPS, false));
+        switchThermals.setChecked(SystemPropertiesHelper.getBoolean(PROP_THERMALS, false));
 
         // Load last apply times
         tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
         tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
 
-        // Load editors - disable save buttons initially
+        // Load editors
         btnGameProps.setEnabled(false);
         btnThermals.setEnabled(false);
         loadGameProps();
@@ -154,8 +152,10 @@ public class MainActivity extends Activity {
         
         switchManual.setOnCheckedChangeListener((v, checked) -> {
             sp.edit().putBoolean("manual", checked).apply();
+            SystemPropertiesHelper.set(PROP_USE_CUSTOM, checked ? "true" : "false");
             updateUIState(checked);
             addLog("Mode: " + (checked ? "Manual" : "Auto"));
+            if (checked) forceReloadPIF();
         });
 
         switchBootloader.setOnCheckedChangeListener((v, checked) -> {
@@ -168,13 +168,8 @@ public class MainActivity extends Activity {
             addLog("PIF spoof: " + (checked ? "ON" : "OFF"));
         });
 
-        switchProvider.setOnCheckedChangeListener((v, checked) -> {
-            SystemPropertiesHelper.set(PROP_USE_CUSTOM, checked ? "true" : "false");
-            addLog("Custom provider: " + (checked ? "ON" : "OFF"));
-            if (checked) forceReloadPIF();
-        });
-
         switchGameProps.setOnCheckedChangeListener((v, checked) -> {
+            SystemPropertiesHelper.set(PROP_GAMEPROPS, checked ? "true" : "false");
             int vis = checked ? View.VISIBLE : View.GONE;
             panelGamePropsBtn.setVisibility(vis);
             if (checked) {
@@ -192,6 +187,7 @@ public class MainActivity extends Activity {
         });
 
         switchThermals.setOnCheckedChangeListener((v, checked) -> {
+            SystemPropertiesHelper.set(PROP_THERMALS, checked ? "true" : "false");
             int vis = checked ? View.VISIBLE : View.GONE;
             panelThermalsBtn.setVisibility(vis);
             if (checked) {
@@ -251,7 +247,6 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // Helper untuk mencegah ScrollView mencegat touch event saat EditText disentuh/di-scroll
     @SuppressLint("ClickableViewAccessibility")
     private void enableInnerScroll(EditText editText) {
         editText.setOnTouchListener((v, event) -> {
@@ -271,7 +266,6 @@ public class MainActivity extends Activity {
 
         String[] lines = content.split("\n");
 
-        // 5 Key Utama Wajib (BRAND Opsional)
         boolean hasManufacturer = false;
         boolean hasModel = false;
         boolean hasFingerprint = false;
@@ -315,41 +309,64 @@ public class MainActivity extends Activity {
         return hasManufacturer && hasModel && hasFingerprint && hasProduct && hasDevice;
     }
 
-    private String ensureBrandValue(String content) {
+    private String processOptionalProps(String content) {
         if (content == null || content.trim().isEmpty()) return content;
 
         String[] lines = content.split("\n");
         String manufacturer = "";
         boolean hasBrand = false;
-        StringBuilder sb = new StringBuilder();
+        boolean hasSecurityPatch = false;
+        boolean hasInitialSdk = false;
+        boolean hasSpoofVendingSdk = false;
 
-        // Cari nilai MANUFACTURER dan cek apakah BRAND sudah ada
+        // Iterasi awal untuk analisis keberadaan key
         for (String line : lines) {
             String trimmed = line.trim();
-            if (trimmed.startsWith("#") || trimmed.isEmpty()) continue;
+            if (trimmed.isEmpty()) continue;
 
-            if (trimmed.contains("=") || trimmed.contains(":")) {
-                String delimiter = trimmed.contains("=") ? "=" : ":";
-                int idx = trimmed.indexOf(delimiter);
-                String key = trimmed.substring(0, idx).trim();
-                String val = trimmed.substring(idx + 1).trim();
+            // Periksa key bahkan jika sedang di-comment (#)
+            String cleanLine = trimmed.startsWith("#") ? trimmed.substring(1).trim() : trimmed;
+
+            if (cleanLine.contains("=") || cleanLine.contains(":")) {
+                String delimiter = cleanLine.contains("=") ? "=" : ":";
+                int idx = cleanLine.indexOf(delimiter);
+                String key = cleanLine.substring(0, idx).trim();
+                String val = cleanLine.substring(idx + 1).trim();
 
                 if (key.equalsIgnoreCase("MANUFACTURER") && !val.isEmpty()) {
                     manufacturer = val;
-                } else if (key.equalsIgnoreCase("BRAND") && !val.isEmpty()) {
+                } else if (key.equalsIgnoreCase("BRAND")) {
                     hasBrand = true;
+                } else if (key.equalsIgnoreCase("SECURITY_PATCH")) {
+                    hasSecurityPatch = true;
+                } else if (key.equalsIgnoreCase("DEVICE_INITIAL_SDK_INT")) {
+                    hasInitialSdk = true;
+                } else if (key.equalsIgnoreCase("spoofVendingSdk")) {
+                    hasSpoofVendingSdk = true;
                 }
             }
         }
 
+        StringBuilder sb = new StringBuilder();
         for (String line : lines) {
             sb.append(line).append("\n");
         }
 
-        // Jika BRAND kosong/tidak ada, otomatis tambahkan BRAND = MANUFACTURER
+        // 1. BRAND: Jika belum ada, samakan nilainya dengan MANUFACTURER
         if (!hasBrand && !manufacturer.isEmpty()) {
             sb.append("BRAND=").append(manufacturer).append("\n");
             addLog("BRAND auto-set to " + manufacturer);
+        }
+
+        // 2. Tambahkan key opsional lain dengan #(disable) jika belum ada di file
+        if (!hasSecurityPatch) {
+            sb.append("#SECURITY_PATCH=\n");
+        }
+        if (!hasInitialSdk) {
+            sb.append("#DEVICE_INITIAL_SDK_INT=\n");
+        }
+        if (!hasSpoofVendingSdk) {
+            sb.append("#spoofVendingSdk=true\n");
         }
 
         return sb.toString().trim();
@@ -667,8 +684,7 @@ public class MainActivity extends Activity {
             content = convertJsonToProp(content);
         }
 
-        // Pastikan BRAND diisi otomatis jika kosong sebelum disimpan
-        content = ensureBrandValue(content);
+        content = processOptionalProps(content);
         etPifEditor.setText(content);
 
         if (writeFile(CUST_PIF_PATH, content)) {
@@ -678,7 +694,7 @@ public class MainActivity extends Activity {
             
             addLog("Manual PIF applied");
             Toast.makeText(this, "Custom PIF applied!", Toast.LENGTH_SHORT).show();
-            if (switchProvider.isChecked()) forceReloadPIF();
+            if (switchManual.isChecked()) forceReloadPIF();
             killGMSAndVending();
             addLog("GMS & Vending killed");
         } else {
@@ -692,21 +708,12 @@ public class MainActivity extends Activity {
             JSONObject obj = new JSONObject(json);
             StringBuilder result = new StringBuilder();
 
-            String manufacturer = obj.optString("MANUFACTURER", "").trim();
-
             Iterator<String> keys = obj.keys();
             while (keys.hasNext()) {
                 String key = keys.next();
                 String val = obj.optString(key, "").trim();
                 if (!val.isEmpty()) {
                     result.append(key).append("=").append(val).append("\n");
-                }
-            }
-
-            // Jika JSON tidak memiliki BRAND, otomatis set ke MANUFACTURER
-            if (!obj.has("BRAND") || obj.optString("BRAND", "").trim().isEmpty()) {
-                if (!manufacturer.isEmpty()) {
-                    result.append("BRAND=").append(manufacturer).append("\n");
                 }
             }
 
@@ -756,7 +763,7 @@ public class MainActivity extends Activity {
                     }
                 } else if (req == 102) {
                     if (content.trim().startsWith("{")) content = convertJsonToProp(content);
-                    content = ensureBrandValue(content);
+                    content = processOptionalProps(content);
                     final String finalContent = content;
                     if (validateProp(finalContent)) {
                         if (writeFile(CUST_PIF_PATH, finalContent)) {
@@ -767,7 +774,7 @@ public class MainActivity extends Activity {
                                 etPifEditor.setText(finalContent);
                                 updateApplyButton(btnApplyManual, etPifEditor, false);
                                 Toast.makeText(MainActivity.this, "Custom PIF saved", Toast.LENGTH_SHORT).show();
-                                if (switchProvider.isChecked()) forceReloadPIF();
+                                if (switchManual.isChecked()) forceReloadPIF();
                             });
                             killGMSAndVending();
                             addLog("Custom PIF saved");
@@ -788,12 +795,16 @@ public class MainActivity extends Activity {
         SystemPropertiesHelper.set(PROP_BOOTLOADER, "true");
         SystemPropertiesHelper.set(PROP_PIF, "true");
         SystemPropertiesHelper.set(PROP_USE_CUSTOM, "false");
+        SystemPropertiesHelper.set(PROP_THERMALS, "false");
+        SystemPropertiesHelper.set(PROP_GAMEPROPS, "false");
 
         addLog("Configuration reset");
         runOnUiThread(() -> {
             switchBootloader.setChecked(true);
             switchPIF.setChecked(true);
-            switchProvider.setChecked(false);
+            switchManual.setChecked(false);
+            switchGameProps.setChecked(false);
+            switchThermals.setChecked(false);
             Toast.makeText(MainActivity.this, "Configuration reset", Toast.LENGTH_SHORT).show();
         });
     }
