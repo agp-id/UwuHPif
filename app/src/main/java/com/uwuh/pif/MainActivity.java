@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -59,6 +60,7 @@ public class MainActivity extends Activity {
     private static final String CUST_PIF_PATH = DIR + "/cust_pif.prop";
     private static final String GAMEPROPS_PATH = LOCAL_DIR + "/gameprops.json";
     private static final String THERMALS_PATH = LOCAL_DIR + "/per_app_thermals.json";
+    private static final String LOG_FILE_PATH = LOCAL_DIR + "/app_session.log";
     
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
@@ -69,11 +71,13 @@ public class MainActivity extends Activity {
     private static final String PROP_THERMALS = "persist.sys.oemports10t.utils.perapp_thermals";
     private static final String PROP_GAMEPROPS = "persist.sys.oemports10t.utils.gameprops";
     
+    // Log Viewer & Toast Manager
     private static final int MAX_LOG_LINES = 20;
     private LinkedList<String> logLines = new LinkedList<>();
     private EditText tvLog;
     private Button btnCopyLog;
     private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Toast currentToast;
 
     private SharedPreferences sp;
     private Switch switchManual, switchBootloader, switchPIF;
@@ -113,7 +117,7 @@ public class MainActivity extends Activity {
         btnResetGameProps = findViewById(R.id.btnResetGameProps);
         btnResetThermals = findViewById(R.id.btnResetThermals);
 
-        // Log viewer - EditText
+        // Log viewer setup
         tvLog = findViewById(R.id.tvLog);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
@@ -126,18 +130,31 @@ public class MainActivity extends Activity {
         enableInnerScroll(etPifEditor);
         enableInnerScroll(tvLog);
 
-        // Load states
+        // Load persistent states
         boolean isManual = sp.getBoolean("manual", false);
         switchManual.setChecked(isManual);
         updateUIState(isManual);
 
-        switchBootloader.setChecked(SystemPropertiesHelper.getBoolean(PROP_BOOTLOADER, true));
-        switchPIF.setChecked(SystemPropertiesHelper.getBoolean(PROP_PIF, true));
-        switchGameProps.setChecked(SystemPropertiesHelper.getBoolean(PROP_GAMEPROPS, false));
-        switchThermals.setChecked(SystemPropertiesHelper.getBoolean(PROP_THERMALS, false));
+        boolean bootloaderState = SystemPropertiesHelper.getBoolean(PROP_BOOTLOADER, true);
+        boolean pifState = SystemPropertiesHelper.getBoolean(PROP_PIF, true);
+        boolean gamePropsState = SystemPropertiesHelper.getBoolean(PROP_GAMEPROPS, false);
+        boolean thermalsState = SystemPropertiesHelper.getBoolean(PROP_THERMALS, false);
+
+        switchBootloader.setChecked(bootloaderState);
+        switchPIF.setChecked(pifState);
+        
+        // SINKRONISASI TAMPILAN PANEL EDIT/RESET SAAT APP DIBUKA
+        switchGameProps.setChecked(gamePropsState);
+        panelGamePropsBtn.setVisibility(gamePropsState ? View.VISIBLE : View.GONE);
+
+        switchThermals.setChecked(thermalsState);
+        panelThermalsBtn.setVisibility(thermalsState ? View.VISIBLE : View.GONE);
 
         tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
         tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
+
+        // Load log file (otomatis reset jika baru saja direboot)
+        loadLogHistory();
 
         loadCustomPIF();
 
@@ -199,6 +216,76 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // ==================== INSTANT TOAST HELPER ====================
+
+    private void showToast(String message) {
+        runOnUiThread(() -> {
+            if (currentToast != null) {
+                currentToast.cancel();
+            }
+            currentToast = Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT);
+            currentToast.show();
+        });
+    }
+
+    // ==================== LOG PERSISTENCE (AUTO CLEAN ON REBOOT) ====================
+
+    private void loadLogHistory() {
+        File logFile = new File(LOG_FILE_PATH);
+        
+        // Hapus log lama jika file dibuat SEBELUM reboot terakhir
+        long bootTime = System.currentTimeMillis() - SystemClock.elapsedRealtime();
+        if (logFile.exists() && logFile.lastModified() < bootTime) {
+            logFile.delete();
+        }
+
+        if (logFile.exists()) {
+            String savedLogs = readFile(LOG_FILE_PATH);
+            if (!savedLogs.isEmpty()) {
+                String[] lines = savedLogs.split("\n");
+                for (String line : lines) {
+                    if (!line.trim().isEmpty()) {
+                        logLines.add(line);
+                    }
+                }
+                updateLogView();
+            }
+        }
+    }
+
+    private void addLog(String msg) {
+        msg = msg.replaceAll("/data/[^\\s]+", "").replaceAll("/odm/[^\\s]+", "")
+                 .replaceAll("/vendor/[^\\s]+", "").replaceAll("/system/[^\\s]+", "");
+        String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+        String logMsg = "[" + timestamp + "] " + msg;
+        
+        if (logLines.size() >= MAX_LOG_LINES) {
+            logLines.removeFirst();
+        }
+        logLines.add(logMsg);
+        
+        saveLogToFile();
+        updateLogView();
+    }
+
+    private void saveLogToFile() {
+        StringBuilder sb = new StringBuilder();
+        for (String line : logLines) {
+            sb.append(line).append("\n");
+        }
+        writeFile(LOG_FILE_PATH, sb.toString().trim());
+    }
+
+    private void updateLogView() {
+        mainHandler.post(() -> {
+            StringBuilder sb = new StringBuilder();
+            for (String line : logLines) {
+                sb.append(line).append("\n");
+            }
+            tvLog.setText(sb.toString().trim());
+        });
+    }
+
     // ==================== CHECK & FALLBACK INITIALIZATION ====================
 
     private void applyFallback() {
@@ -238,14 +325,12 @@ public class MainActivity extends Activity {
             boolean kbUpdated = false;
             boolean pifUpdated = false;
 
-            // Cek & Update Keybox
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
                 if (writeFile(KB_PATH, newKb)) {
                     kbUpdated = true;
                 }
             }
 
-            // Cek & Update PIF
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
                 if (writeFile(PIF_PATH, newPif)) {
                     pifUpdated = true;
@@ -260,11 +345,10 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 tvLastUpdate.setText("Last update: " + date);
                 if (showToast) {
-                    Toast.makeText(MainActivity.this, isAnyUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
+                    showToast(isAnyUpdated ? "Files updated!" : "Already latest.");
                 }
             });
 
-            // LOG RESULT
             if (kbUpdated && pifUpdated) {
                 addLog("pif & keybox updated");
                 killGMSAndVending();
@@ -280,9 +364,7 @@ public class MainActivity extends Activity {
 
         } catch (Exception e) {
             addLog("failed");
-            runOnUiThread(() -> {
-                if (showToast) Toast.makeText(MainActivity.this, "Update failed", Toast.LENGTH_SHORT).show();
-            });
+            if (showToast) showToast("Update failed");
         }
     }
 
@@ -351,10 +433,10 @@ public class MainActivity extends Activity {
 
             if (success) {
                 addLog(tag + " config saved successfully via GUI");
-                Toast.makeText(MainActivity.this, "Configuration saved!", Toast.LENGTH_SHORT).show();
+                showToast("Configuration saved!");
             } else {
                 addLog(tag + " config save failed");
-                Toast.makeText(MainActivity.this, "Save failed!", Toast.LENGTH_SHORT).show();
+                showToast("Save failed!");
             }
             dialog.dismiss();
         });
@@ -528,9 +610,10 @@ public class MainActivity extends Activity {
         String data = readRaw(R.raw.default_gameprops);
         if (!data.isEmpty() && writeFile(GAMEPROPS_PATH, data)) {
             addLog("GameProps reset successfully");
-            Toast.makeText(this, "GameProps reset", Toast.LENGTH_SHORT).show();
+            showToast("GameProps reset");
         } else {
             addLog("GameProps reset failed");
+            showToast("Reset failed");
         }
     }
 
@@ -538,26 +621,11 @@ public class MainActivity extends Activity {
         String data = readRaw(R.raw.default_thermals);
         if (!data.isEmpty() && writeFile(THERMALS_PATH, data)) {
             addLog("Thermals reset successfully");
-            Toast.makeText(this, "Thermals reset", Toast.LENGTH_SHORT).show();
+            showToast("Thermals reset");
         } else {
             addLog("Thermals reset failed");
+            showToast("Reset failed");
         }
-    }
-
-    private void addLog(String msg) {
-        msg = msg.replaceAll("/data/[^\\s]+", "").replaceAll("/odm/[^\\s]+", "")
-                 .replaceAll("/vendor/[^\\s]+", "").replaceAll("/system/[^\\s]+", "");
-        String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
-        String logMsg = "[" + timestamp + "] " + msg;
-        
-        if (logLines.size() >= MAX_LOG_LINES) logLines.removeFirst();
-        logLines.add(logMsg);
-        
-        mainHandler.post(() -> {
-            StringBuilder sb = new StringBuilder();
-            for (String line : logLines) sb.append(line).append("\n");
-            tvLog.setText(sb.toString());
-        });
     }
 
     private void copyLog() {
@@ -565,7 +633,7 @@ public class MainActivity extends Activity {
         if (logText != null && !logText.isEmpty() && !logText.equals("[Log ready]")) {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             clipboard.setPrimaryClip(ClipData.newPlainText("Debug Log", logText));
-            Toast.makeText(this, "Log copied", Toast.LENGTH_SHORT).show();
+            showToast("Log copied");
             addLog("Log copied");
         }
     }
@@ -600,13 +668,13 @@ public class MainActivity extends Activity {
         String content = etPifEditor.getText().toString().trim();
         if (content.isEmpty() || content.startsWith("# No custom")) {
             addLog("Manual PIF apply failed: Content empty");
-            Toast.makeText(this, "No content to apply", Toast.LENGTH_SHORT).show();
+            showToast("No content to apply");
             return;
         }
 
         if (!validateProp(content)) {
             addLog("Manual PIF apply failed: Invalid format");
-            Toast.makeText(this, "Invalid PROP format", Toast.LENGTH_SHORT).show();
+            showToast("Invalid PROP format");
             return;
         }
 
@@ -619,13 +687,13 @@ public class MainActivity extends Activity {
             tvPifLastApply.setText("Last apply: " + time);
             
             addLog("Custom PIF applied & saved successfully");
-            Toast.makeText(this, "Custom PIF applied!", Toast.LENGTH_SHORT).show();
+            showToast("Custom PIF applied!");
             
             if (switchManual.isChecked()) forceReloadPIF();
             killGMSAndVending();
         } else {
             addLog("Manual PIF apply failed: File write error");
-            Toast.makeText(this, "Save failed", Toast.LENGTH_SHORT).show();
+            showToast("Save failed");
         }
     }
 
@@ -654,8 +722,10 @@ public class MainActivity extends Activity {
                         sp.edit().putString("keybox_last_apply", time).apply();
                         runOnUiThread(() -> tvKeyboxLastApply.setText("Last apply: " + time));
                         addLog("Custom Keybox saved successfully");
+                        showToast("Keybox saved!");
                     } else {
                         addLog("Custom Keybox save failed");
+                        showToast("Keybox save failed");
                     }
                 } else if (req == 102) {
                     content = processOptionalProps(content);
@@ -669,9 +739,11 @@ public class MainActivity extends Activity {
                             updateApplyButton(btnApplyManual, etPifEditor);
                         });
                         addLog("Custom PIF saved successfully");
+                        showToast("Custom PIF saved!");
                         killGMSAndVending();
                     } else {
                         addLog("Custom PIF save/validation failed");
+                        showToast("PIF save/validation failed");
                     }
                 }
             }).start();
@@ -692,7 +764,11 @@ public class MainActivity extends Activity {
             switchManual.setChecked(false);
             switchGameProps.setChecked(false);
             switchThermals.setChecked(false);
-            Toast.makeText(MainActivity.this, "Configuration reset", Toast.LENGTH_SHORT).show();
+
+            panelGamePropsBtn.setVisibility(View.GONE);
+            panelThermalsBtn.setVisibility(View.GONE);
+
+            showToast("Configuration reset");
         });
     }
 
