@@ -1,5 +1,6 @@
 package com.uwuh.pif;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.ClipData;
@@ -11,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -106,9 +108,15 @@ public class MainActivity extends Activity {
         btnResetGameProps = findViewById(R.id.btnResetGameProps);
         btnResetThermals = findViewById(R.id.btnResetThermals);
 
-        // Log viewer - sekarang EditText
+        // Log viewer - EditText
         tvLog = findViewById(R.id.tvLog);
         btnCopyLog = findViewById(R.id.btnCopyLog);
+
+        // Aktifkan scroll di dalam ScrollView untuk semua EditText
+        enableInnerScroll(etPifEditor);
+        enableInnerScroll(etGameProps);
+        enableInnerScroll(etThermals);
+        enableInnerScroll(tvLog);
 
         // Load states
         boolean isManual = sp.getBoolean("manual", false);
@@ -232,6 +240,23 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // Helper untuk mencegah ScrollView mencegat (intercept) touch event saat EditText di-scroll
+    @SuppressLint("ClickableViewAccessibility")
+    private void enableInnerScroll(EditText editText) {
+        editText.setOnTouchListener((v, event) -> {
+            if (editText.hasFocus()) {
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+                switch (event.getAction() & MotionEvent.ACTION_MASK) {
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        v.getParent().requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+            }
+            return false;
+        });
+    }
+
     // ==================== VALIDATION ====================
 
     private boolean validateProp(String content) {
@@ -333,7 +358,6 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Invalid JSON format", Toast.LENGTH_SHORT).show();
             addLog("GameProps: Invalid JSON");
         }
-        // Reload to refresh validation
         updateApplyButton(btnGameProps, etGameProps, true);
     }
 
@@ -420,7 +444,6 @@ public class MainActivity extends Activity {
                 sb.append(line).append("\n");
             }
             tvLog.setText(sb.toString());
-            // Auto scroll to bottom
             tvLog.setSelection(tvLog.getText().length());
         });
     }
