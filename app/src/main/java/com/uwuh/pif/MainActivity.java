@@ -35,6 +35,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Locale;
 
@@ -263,33 +264,95 @@ public class MainActivity extends Activity {
         });
     }
 
-    // ==================== VALIDATION ====================
+    // ==================== VALIDATION & CONVERSION ====================
 
     private boolean validateProp(String content) {
         if (content == null || content.trim().isEmpty()) return false;
+
         String[] lines = content.split("\n");
-        boolean hasManufacturer = false, hasModel = false, hasFingerprint = false;
-        boolean hasBrand = false, hasProduct = false, hasDevice = false;
-        boolean hasSecurityPatch = false, hasSdk = false;
-        
+
+        // 5 Key Utama Wajib (BRAND Opsional)
+        boolean hasManufacturer = false;
+        boolean hasModel = false;
+        boolean hasFingerprint = false;
+        boolean hasProduct = false;
+        boolean hasDevice = false;
+
         for (String line : lines) {
             line = line.trim();
+
             if (line.startsWith("#") || line.isEmpty()) continue;
-            if (line.contains("=")) {
-                String key = line.substring(0, line.indexOf('=')).trim();
-                String value = line.substring(line.indexOf('=') + 1).trim();
-                if (key.equals("MANUFACTURER") && !value.isEmpty()) hasManufacturer = true;
-                else if (key.equals("MODEL") && !value.isEmpty()) hasModel = true;
-                else if (key.equals("FINGERPRINT") && !value.isEmpty()) hasFingerprint = true;
-                else if (key.equals("BRAND") && !value.isEmpty()) hasBrand = true;
-                else if (key.equals("PRODUCT") && !value.isEmpty()) hasProduct = true;
-                else if (key.equals("DEVICE") && !value.isEmpty()) hasDevice = true;
-                else if (key.equals("SECURITY_PATCH") && !value.isEmpty()) hasSecurityPatch = true;
-                else if (key.equals("DEVICE_INITIAL_SDK_INT") && !value.isEmpty()) hasSdk = true;
+
+            if (line.contains("=") || line.contains(":")) {
+                String delimiter = line.contains("=") ? "=" : ":";
+                int index = line.indexOf(delimiter);
+
+                String key = line.substring(0, index).trim();
+                String value = line.substring(index + 1).trim();
+
+                if (!value.isEmpty()) {
+                    switch (key) {
+                        case "MANUFACTURER":
+                            hasManufacturer = true;
+                            break;
+                        case "MODEL":
+                            hasModel = true;
+                            break;
+                        case "FINGERPRINT":
+                            hasFingerprint = true;
+                            break;
+                        case "PRODUCT":
+                            hasProduct = true;
+                            break;
+                        case "DEVICE":
+                            hasDevice = true;
+                            break;
+                    }
+                }
             }
         }
-        return hasManufacturer && hasModel && hasFingerprint && hasBrand && 
-               hasProduct && hasDevice && hasSecurityPatch && hasSdk;
+
+        return hasManufacturer && hasModel && hasFingerprint && hasProduct && hasDevice;
+    }
+
+    private String ensureBrandValue(String content) {
+        if (content == null || content.trim().isEmpty()) return content;
+
+        String[] lines = content.split("\n");
+        String manufacturer = "";
+        boolean hasBrand = false;
+        StringBuilder sb = new StringBuilder();
+
+        // Cari nilai MANUFACTURER dan cek apakah BRAND sudah ada
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("#") || trimmed.isEmpty()) continue;
+
+            if (trimmed.contains("=") || trimmed.contains(":")) {
+                String delimiter = trimmed.contains("=") ? "=" : ":";
+                int idx = trimmed.indexOf(delimiter);
+                String key = trimmed.substring(0, idx).trim();
+                String val = trimmed.substring(idx + 1).trim();
+
+                if (key.equalsIgnoreCase("MANUFACTURER") && !val.isEmpty()) {
+                    manufacturer = val;
+                } else if (key.equalsIgnoreCase("BRAND") && !val.isEmpty()) {
+                    hasBrand = true;
+                }
+            }
+        }
+
+        for (String line : lines) {
+            sb.append(line).append("\n");
+        }
+
+        // Jika BRAND kosong/tidak ada, otomatis tambahkan BRAND = MANUFACTURER
+        if (!hasBrand && !manufacturer.isEmpty()) {
+            sb.append("BRAND=").append(manufacturer).append("\n");
+            addLog("BRAND auto-set to " + manufacturer);
+        }
+
+        return sb.toString().trim();
     }
 
     private boolean validateJson(String content) {
@@ -602,9 +665,11 @@ public class MainActivity extends Activity {
 
         if (content.trim().startsWith("{")) {
             content = convertJsonToProp(content);
-            etPifEditor.setText(content);
-            addLog("Manual PIF: JSON converted");
         }
+
+        // Pastikan BRAND diisi otomatis jika kosong sebelum disimpan
+        content = ensureBrandValue(content);
+        etPifEditor.setText(content);
 
         if (writeFile(CUST_PIF_PATH, content)) {
             String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
@@ -625,16 +690,26 @@ public class MainActivity extends Activity {
     private String convertJsonToProp(String json) {
         try {
             JSONObject obj = new JSONObject(json);
-            String[] keys = {"MANUFACTURER", "MODEL", "FINGERPRINT", "BRAND", "PRODUCT", "DEVICE", "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"};
             StringBuilder result = new StringBuilder();
-            for (String key : keys) {
-                if (obj.has(key)) {
-                    result.append(key).append("=").append(obj.getString(key)).append("\n");
+
+            String manufacturer = obj.optString("MANUFACTURER", "").trim();
+
+            Iterator<String> keys = obj.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                String val = obj.optString(key, "").trim();
+                if (!val.isEmpty()) {
+                    result.append(key).append("=").append(val).append("\n");
                 }
             }
-            if (obj.has("spoofVendingSdk")) {
-                result.append("spoofVendingSdk=").append(obj.getString("spoofVendingSdk")).append("\n");
+
+            // Jika JSON tidak memiliki BRAND, otomatis set ke MANUFACTURER
+            if (!obj.has("BRAND") || obj.optString("BRAND", "").trim().isEmpty()) {
+                if (!manufacturer.isEmpty()) {
+                    result.append("BRAND=").append(manufacturer).append("\n");
+                }
             }
+
             return result.toString();
         } catch (Exception e) {
             return json;
@@ -681,6 +756,7 @@ public class MainActivity extends Activity {
                     }
                 } else if (req == 102) {
                     if (content.trim().startsWith("{")) content = convertJsonToProp(content);
+                    content = ensureBrandValue(content);
                     final String finalContent = content;
                     if (validateProp(finalContent)) {
                         if (writeFile(CUST_PIF_PATH, finalContent)) {
