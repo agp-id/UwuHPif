@@ -168,23 +168,6 @@
             android:text="Enable GameProps"
             android:textSize="14sp" />
 
-        <EditText
-            android:id="@+id/etGameProps"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="4dp"
-            android:background="#F5F5F5"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:textSize="12sp"
-            android:typeface="monospace"
-            android:textColor="#000000"
-            android:inputType="textMultiLine|textNoSuggestions"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"
-            android:isScrollContainer="true"
-            android:visibility="gone" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -198,8 +181,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Edit"
-                android:enabled="false" />
+                android:text="Edit App Config" />
 
             <Button
                 android:id="@+id/btnResetGameProps"
@@ -218,23 +200,6 @@
             android:text="Enable Thermals"
             android:textSize="14sp" />
 
-        <EditText
-            android:id="@+id/etThermals"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="4dp"
-            android:background="#F5F5F5"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:textSize="12sp"
-            android:typeface="monospace"
-            android:textColor="#000000"
-            android:inputType="textMultiLine|textNoSuggestions"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"
-            android:isScrollContainer="true"
-            android:visibility="gone" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -248,8 +213,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Edit"
-                android:enabled="false" />
+                android:text="Edit App Config" />
 
             <Button
                 android:id="@+id/btnResetThermals"
