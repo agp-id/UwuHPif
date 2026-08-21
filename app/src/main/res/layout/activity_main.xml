@@ -152,7 +152,7 @@
                 android:textSize="12sp"
                 android:typeface="monospace"
                 android:textColor="#000000"
-                android:inputType="textMultiLine"
+                android:inputType="textMultiLine|textNoSuggestions"
                 android:scrollbars="vertical"
                 android:overScrollMode="always"
                 android:isScrollContainer="true" />
@@ -175,6 +175,24 @@
             android:layout_marginTop="16dp"
             android:text="Enable GameProps"
             android:textSize="14sp" />
+
+        <!-- Textbox dipindah di atas Tombol -->
+        <EditText
+            android:id="@+id/etGameProps"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="4dp"
+            android:background="#F5F5F5"
+            android:gravity="top|start"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:typeface="monospace"
+            android:textColor="#000000"
+            android:inputType="textMultiLine|textNoSuggestions"
+            android:scrollbars="vertical"
+            android:overScrollMode="always"
+            android:isScrollContainer="true"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -200,8 +218,18 @@
                 android:layout_marginLeft="4dp" />
         </LinearLayout>
 
+        <!-- ==================== EDITOR: THERMALS ==================== -->
+        <Switch
+            android:id="@+id/switchThermals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Enable Thermals"
+            android:textSize="14sp" />
+
+        <!-- Textbox dipindah di atas Tombol -->
         <EditText
-            android:id="@+id/etGameProps"
+            android:id="@+id/etThermals"
             android:layout_width="match_parent"
             android:layout_height="120dp"
             android:layout_marginTop="4dp"
@@ -211,20 +239,11 @@
             android:textSize="12sp"
             android:typeface="monospace"
             android:textColor="#000000"
-            android:inputType="textMultiLine"
+            android:inputType="textMultiLine|textNoSuggestions"
             android:scrollbars="vertical"
             android:overScrollMode="always"
             android:isScrollContainer="true"
             android:visibility="gone" />
-
-        <!-- ==================== EDITOR: THERMALS ==================== -->
-        <Switch
-            android:id="@+id/switchThermals"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Enable Thermals"
-            android:textSize="14sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -249,23 +268,6 @@
                 android:text="Reset Config"
                 android:layout_marginLeft="4dp" />
         </LinearLayout>
-
-        <EditText
-            android:id="@+id/etThermals"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="4dp"
-            android:background="#F5F5F5"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:textSize="12sp"
-            android:typeface="monospace"
-            android:textColor="#000000"
-            android:inputType="textMultiLine"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"
-            android:isScrollContainer="true"
-            android:visibility="gone" />
 
         <!-- ==================== RESET ==================== -->
         <Button
@@ -327,7 +329,7 @@
             android:textColor="#00FF00"
             android:textSize="10sp"
             android:typeface="monospace"
-            android:inputType="textMultiLine"
+            android:inputType="textMultiLine|textNoSuggestions"
             android:scrollbars="vertical"
             android:overScrollMode="always"
             android:isScrollContainer="true" />
