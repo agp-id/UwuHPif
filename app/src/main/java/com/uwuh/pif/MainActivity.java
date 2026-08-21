@@ -23,12 +23,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -49,6 +47,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String DIR = "/data/system/uwuh";
@@ -213,13 +212,12 @@ public class MainActivity extends Activity {
 
         TextView tvTitle = view.findViewById(R.id.tvDialogTitle);
         Switch switchSystem = view.findViewById(R.id.switchSystemApps);
-        RecyclerView rvList = view.findViewById(R.id.rvAppList);
+        ListView lvList = view.findViewById(R.id.lvAppList);
         Button btnCancel = view.findViewById(R.id.btnCancel);
         Button btnSave = view.findViewById(R.id.btnSaveConfig);
 
         tvTitle.setText(isGameProps ? "GameProps App Config" : "Thermals App Config");
 
-        // Opsi Dropdown
         List<String> options = new ArrayList<>();
         options.add("None");
         if (isGameProps) {
@@ -227,12 +225,11 @@ public class MainActivity extends Activity {
             options.add("device2");
             options.add("device3");
         } else {
-            options.add("1"); // GAMING
-            options.add("2"); // EVALUATION
-            options.add("3"); // INSANE
+            options.add("1");
+            options.add("2");
+            options.add("3");
         }
 
-        // Baca file JSON saat ini
         String jsonString = readFile(isGameProps ? GAMEPROPS_PATH : THERMALS_PATH);
         HashMap<String, String> currentMap = parseJsonToMap(jsonString, isGameProps);
 
@@ -249,9 +246,8 @@ public class MainActivity extends Activity {
             allApps.add(new AppModel(appName, pkgName, pkg.applicationInfo.loadIcon(pm), isSys, config));
         }
 
-        rvList.setLayoutManager(new LinearLayoutManager(this));
         AppConfigAdapter adapter = new AppConfigAdapter(this, filterApps(allApps, false), options);
-        rvList.setAdapter(adapter);
+        lvList.setAdapter(adapter);
 
         switchSystem.setOnCheckedChangeListener((v, isChecked) -> {
             adapter.updateList(filterApps(allApps, isChecked));
