@@ -6,25 +6,24 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
-import java.util.ArrayList;
 import java.util.List;
 
-public class AppConfigAdapter extends RecyclerView.Adapter<AppConfigAdapter.ViewHolder> {
+public class AppConfigAdapter extends BaseAdapter {
     private List<AppModel> appList;
     private List<String> configOptions;
     private Context context;
+    private LayoutInflater inflater;
 
     public AppConfigAdapter(Context context, List<AppModel> appList, List<String> configOptions) {
         this.context = context;
         this.appList = appList;
         this.configOptions = configOptions;
+        this.inflater = LayoutInflater.from(context);
     }
 
     public void updateList(List<AppModel> newList) {
@@ -32,15 +31,36 @@ public class AppConfigAdapter extends RecyclerView.Adapter<AppConfigAdapter.View
         notifyDataSetChanged();
     }
 
-    @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_app_config, parent, false);
-        return new ViewHolder(view);
+    public int getCount() {
+        return appList.size();
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public Object getItem(int position) {
+        return appList.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        ViewHolder holder;
+        if (convertView == null) {
+            convertView = inflater.inflate(R.layout.item_app_config, parent, false);
+            holder = new ViewHolder();
+            holder.imgAppIcon = convertView.findViewById(R.id.imgAppIcon);
+            holder.tvAppName = convertView.findViewById(R.id.tvAppName);
+            holder.tvPackageName = convertView.findViewById(R.id.tvPackageName);
+            holder.spConfigOption = convertView.findViewById(R.id.spConfigOption);
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
+        }
+
         AppModel item = appList.get(position);
         holder.tvAppName.setText(item.getAppName());
         holder.tvPackageName.setText(item.getPackageName());
@@ -61,31 +81,20 @@ public class AppConfigAdapter extends RecyclerView.Adapter<AppConfigAdapter.View
 
         holder.spConfigOption.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+            public void onItemSelected(AdapterView<?> p, View v, int pos, long id) {
                 item.setSelectedConfig(configOptions.get(pos));
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> p) {}
         });
+
+        return convertView;
     }
 
-    @Override
-    public int getItemCount() {
-        return appList.size();
-    }
-
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    private static class ViewHolder {
         ImageView imgAppIcon;
         TextView tvAppName, tvPackageName;
         Spinner spConfigOption;
-
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            imgAppIcon = itemView.findViewById(R.id.imgAppIcon);
-            tvAppName = itemView.findViewById(R.id.tvAppName);
-            tvPackageName = itemView.findViewById(R.id.tvPackageName);
-            spConfigOption = itemView.findViewById(R.id.spConfigOption);
-        }
     }
 }
