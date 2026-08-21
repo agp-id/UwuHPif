@@ -62,8 +62,6 @@ public class MainActivity extends Activity {
     
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
-    private static final String URL_GAMEPROPS = "https://raw.githubusercontent.com/user/repo/main/gameprops.json";
-    private static final String URL_THERMALS = "https://raw.githubusercontent.com/user/repo/main/per_app_thermals.json";
     
     private static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
     private static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
@@ -175,7 +173,6 @@ public class MainActivity extends Activity {
         });
 
         btnUpdate.setOnClickListener(v -> new Thread(() -> {
-            addLog("Checking updates...");
             checkUpdateOnline(true);
         }).start());
 
@@ -196,16 +193,105 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             createDirectories();
             applyFallback();
-            addLog("Fallback applied");
             if (!sp.getBoolean("manual", false)) {
                 checkUpdateOnline(false);
             }
         }).start();
     }
 
+    // ==================== CHECK & FALLBACK INITIALIZATION ====================
+
+    private void applyFallback() {
+        try {
+            checkAndCreateFallback(KB_PATH, R.raw.default_keybox, "Keybox");
+            checkAndCreateFallback(PIF_PATH, R.raw.default_pif, "PIF");
+            checkAndCreateFallback(GAMEPROPS_PATH, R.raw.default_gameprops, "GameProps");
+            checkAndCreateFallback(THERMALS_PATH, R.raw.default_thermals, "Thermals");
+        } catch (Exception e) {
+            addLog("Fallback check error");
+        }
+    }
+
+    private void checkAndCreateFallback(String path, int rawResId, String tag) {
+        File file = new File(path);
+        if (file.exists()) {
+            addLog(tag + " file exists");
+        } else {
+            String data = readRaw(rawResId);
+            if (!data.isEmpty() && writeFile(path, data)) {
+                addLog(tag + " created from fallback");
+            } else {
+                addLog("Failed to create " + tag + " fallback");
+            }
+        }
+    }
+
+    // ==================== ONLINE UPDATE LOGIC ====================
+
+    private void checkUpdateOnline(boolean showToast) {
+        addLog("Checking update...");
+
+        try {
+            String newKb = fetch(URL_KB);
+            String newPif = fetch(URL_PIF);
+
+            boolean kbUpdated = false;
+            boolean pifUpdated = false;
+
+            // Cek & Update Keybox
+            if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
+                if (writeFile(KB_PATH, newKb)) {
+                    kbUpdated = true;
+                }
+            }
+
+            // Cek & Update PIF
+            if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
+                if (writeFile(PIF_PATH, newPif)) {
+                    pifUpdated = true;
+                }
+            }
+
+            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+            sp.edit().putString("last_update", date).apply();
+
+            final boolean isAnyUpdated = kbUpdated || pifUpdated;
+
+            runOnUiThread(() -> {
+                tvLastUpdate.setText("Last update: " + date);
+                if (showToast) {
+                    Toast.makeText(MainActivity.this, isAnyUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            // LOG RESULT
+            if (kbUpdated && pifUpdated) {
+                addLog("pif & keybox updated");
+                killGMSAndVending();
+            } else if (pifUpdated) {
+                addLog("pif updated");
+                killGMSAndVending();
+            } else if (kbUpdated) {
+                addLog("keybox updated");
+                killGMSAndVending();
+            } else {
+                addLog("Already latest");
+            }
+
+        } catch (Exception e) {
+            addLog("failed");
+            runOnUiThread(() -> {
+                if (showToast) Toast.makeText(MainActivity.this, "Update failed", Toast.LENGTH_SHORT).show();
+            });
+        }
+    }
+
     // ==================== GUI POPUP DIALOG LOGIC ====================
 
     private void showAppConfigDialog(boolean isGameProps) {
+        String tag = isGameProps ? "GameProps" : "Thermals";
+        addLog("Opening " + tag + " app config GUI...");
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_app_config, null);
         builder.setView(view);
@@ -255,11 +341,21 @@ public class MainActivity extends Activity {
 
         AlertDialog dialog = builder.create();
 
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnCancel.setOnClickListener(v -> {
+            addLog(tag + " config GUI cancelled");
+            dialog.dismiss();
+        });
+
         btnSave.setOnClickListener(v -> {
-            saveMapToJson(allApps, isGameProps);
-            addLog((isGameProps ? "GameProps" : "Thermals") + " config saved via GUI");
-            Toast.makeText(MainActivity.this, "Configuration saved!", Toast.LENGTH_SHORT).show();
+            boolean success = saveMapToJson(allApps, isGameProps);
+
+            if (success) {
+                addLog(tag + " config saved successfully via GUI");
+                Toast.makeText(MainActivity.this, "Configuration saved!", Toast.LENGTH_SHORT).show();
+            } else {
+                addLog(tag + " config save failed");
+                Toast.makeText(MainActivity.this, "Save failed!", Toast.LENGTH_SHORT).show();
+            }
             dialog.dismiss();
         });
 
@@ -301,7 +397,7 @@ public class MainActivity extends Activity {
         return map;
     }
 
-    private void saveMapToJson(List<AppModel> allApps, boolean isGameProps) {
+    private boolean saveMapToJson(List<AppModel> allApps, boolean isGameProps) {
         try {
             JSONObject root = new JSONObject();
 
@@ -335,13 +431,14 @@ public class MainActivity extends Activity {
                 root.put(configKey, configObj);
             }
 
-            writeFile(isGameProps ? GAMEPROPS_PATH : THERMALS_PATH, root.toString(4));
+            String path = isGameProps ? GAMEPROPS_PATH : THERMALS_PATH;
+            return writeFile(path, root.toString(4));
         } catch (Exception e) {
-            e.printStackTrace();
+            return false;
         }
     }
 
-    // ==================== UTILITIES & HELPERS ====================
+    // ==================== UTILITIES & MANUAL APPLY ====================
 
     @SuppressLint("ClickableViewAccessibility")
     private void enableInnerScroll(EditText editText) {
@@ -430,16 +527,20 @@ public class MainActivity extends Activity {
     private void resetGameProps() {
         String data = readRaw(R.raw.default_gameprops);
         if (!data.isEmpty() && writeFile(GAMEPROPS_PATH, data)) {
-            addLog("GameProps reset");
+            addLog("GameProps reset successfully");
             Toast.makeText(this, "GameProps reset", Toast.LENGTH_SHORT).show();
+        } else {
+            addLog("GameProps reset failed");
         }
     }
 
     private void resetThermals() {
         String data = readRaw(R.raw.default_thermals);
         if (!data.isEmpty() && writeFile(THERMALS_PATH, data)) {
-            addLog("Thermals reset");
+            addLog("Thermals reset successfully");
             Toast.makeText(this, "Thermals reset", Toast.LENGTH_SHORT).show();
+        } else {
+            addLog("Thermals reset failed");
         }
     }
 
@@ -495,44 +596,16 @@ public class MainActivity extends Activity {
         new File(LOCAL_DIR).mkdirs();
     }
 
-    private void applyFallback() {
-        try {
-            if (!new File(KB_PATH).exists()) writeFile(KB_PATH, readRaw(R.raw.default_keybox));
-            if (!new File(PIF_PATH).exists()) writeFile(PIF_PATH, readRaw(R.raw.default_pif));
-            if (!new File(GAMEPROPS_PATH).exists()) writeFile(GAMEPROPS_PATH, readRaw(R.raw.default_gameprops));
-            if (!new File(THERMALS_PATH).exists()) writeFile(THERMALS_PATH, readRaw(R.raw.default_thermals));
-        } catch (Exception e) {}
-    }
-
-    private void checkUpdateOnline(boolean showToast) {
-        try {
-            String newKb = fetch(URL_KB), newPif = fetch(URL_PIF);
-            String newGame = fetch(URL_GAMEPROPS), newTherm = fetch(URL_THERMALS);
-
-            boolean updated = false;
-            if (newKb != null && !newKb.equals(readFile(KB_PATH))) { writeFile(KB_PATH, newKb); updated = true; }
-            if (newPif != null && !newPif.equals(readFile(PIF_PATH))) { writeFile(PIF_PATH, newPif); updated = true; }
-            if (newGame != null && !newGame.equals(readFile(GAMEPROPS_PATH))) { writeFile(GAMEPROPS_PATH, newGame); updated = true; }
-            if (newTherm != null && !newTherm.equals(readFile(THERMALS_PATH))) { writeFile(THERMALS_PATH, newTherm); updated = true; }
-
-            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-            sp.edit().putString("last_update", date).apply();
-
-            final boolean isUpdated = updated;
-            runOnUiThread(() -> {
-                tvLastUpdate.setText("Last update: " + date);
-                if (showToast) Toast.makeText(MainActivity.this, isUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
-            });
-
-            if (updated) killGMSAndVending();
-        } catch (Exception e) {}
-    }
-
     private void applyManualPIF() {
         String content = etPifEditor.getText().toString().trim();
-        if (content.isEmpty() || content.startsWith("# No custom")) return;
+        if (content.isEmpty() || content.startsWith("# No custom")) {
+            addLog("Manual PIF apply failed: Content empty");
+            Toast.makeText(this, "No content to apply", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         if (!validateProp(content)) {
+            addLog("Manual PIF apply failed: Invalid format");
             Toast.makeText(this, "Invalid PROP format", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -544,9 +617,15 @@ public class MainActivity extends Activity {
             String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
             sp.edit().putString("pif_last_apply", time).apply();
             tvPifLastApply.setText("Last apply: " + time);
+            
+            addLog("Custom PIF applied & saved successfully");
             Toast.makeText(this, "Custom PIF applied!", Toast.LENGTH_SHORT).show();
+            
             if (switchManual.isChecked()) forceReloadPIF();
             killGMSAndVending();
+        } else {
+            addLog("Manual PIF apply failed: File write error");
+            Toast.makeText(this, "Save failed", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -574,6 +653,9 @@ public class MainActivity extends Activity {
                         String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
                         sp.edit().putString("keybox_last_apply", time).apply();
                         runOnUiThread(() -> tvKeyboxLastApply.setText("Last apply: " + time));
+                        addLog("Custom Keybox saved successfully");
+                    } else {
+                        addLog("Custom Keybox save failed");
                     }
                 } else if (req == 102) {
                     content = processOptionalProps(content);
@@ -586,7 +668,10 @@ public class MainActivity extends Activity {
                             etPifEditor.setText(finalContent);
                             updateApplyButton(btnApplyManual, etPifEditor);
                         });
+                        addLog("Custom PIF saved successfully");
                         killGMSAndVending();
+                    } else {
+                        addLog("Custom PIF save/validation failed");
                     }
                 }
             }).start();
