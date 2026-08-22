@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -9,8 +9,8 @@
         android:id="@+id/tvDialogTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Edit Konfigurasi Aplikasi"
-        android:textSize="16sp"
+        android:text="App Config"
+        android:textSize="18sp"
         android:textStyle="bold" />
 
     <Switch
@@ -18,39 +18,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Tampilkan System App"
-        android:textSize="13sp" />
+        android:text="Show System Apps" />
 
-    <!-- Menggunakan ListView Bawaan Framework -->
     <ListView
         android:id="@+id/lvAppList"
         android:layout_width="match_parent"
-        android:layout_height="350dp"
-        android:layout_marginTop="8dp"
-        android:divider="#DDDDDD"
-        android:dividerHeight="1dp" />
+        android:layout_height="300dp"
+        android:layout_marginTop="8dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btnCancel"
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Batal" />
+            android:layout_weight="1"
+            android:text="Cancel" />
 
         <Button
             android:id="@+id/btnSaveConfig"
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Simpan" />
+            android:layout_weight="1"
+            android:text="Save" />
     </LinearLayout>
-
 </LinearLayout>
