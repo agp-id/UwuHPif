@@ -26,7 +26,6 @@ public class BootReceiver extends BroadcastReceiver {
     private static final String GAMEPROPS_PATH = DIR + "/gameprops.json";
     private static final String THERMALS_PATH = DIR + "/per_app_thermals.json";
 
-    // HANYA UPDATE ONLINE UNTUK PIF & KEYBOX
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
 
