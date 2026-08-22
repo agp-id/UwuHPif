@@ -4,29 +4,20 @@ plugins {
 
 android {
     namespace 'com.uwuh.utils'
-    compileSdk 35
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.uwuh.utils"
         minSdk 26
-        targetSdk 35
+        targetSdk 34
         versionCode 1
         versionName "1.0"
-
-        // Mengatur Nama Aplikasi langsung di Gradle
-        resValue "string", "app_name", "UwuH"
     }
 
     buildTypes {
         release {
-            // AKTIFKAN OBFUSCATION & PENGECILAN UKURAN APK
-            minifyEnabled true
-            shrinkResources true
-            debuggable false
-            signingConfig signingConfigs.debug
-
-            // Aturan pengacakan kode
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled false
+            shrinkResources false
         }
         debug {
             minifyEnabled false
@@ -36,16 +27,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    // Mengabaikan metadata yang tidak diperlukan untuk memperkecil ukuran
-    packagingOptions {
-        resources {
-            excludes += [
-                'META-INF/*.version',
-                'META-INF/*.kotlin_module'
-            ]
-        }
     }
 }
 
