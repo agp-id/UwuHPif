@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
 
     private SharedPreferences sp;
     private Switch switchManual, switchBootloader, switchPIF;
-    private Switch switchGameProps, switchThermals, switchAutoUpdateDevices;
+    private Switch switchGameProps, switchThermals;
     private TextView tvLastUpdate, tvAutoStatus;
     private TextView tvKeyboxLastApply, tvPifLastApply;
     private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
@@ -95,12 +95,14 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
+        // INISIALISASI DEFAULT PERSIST SYSTEM PROPERTIES JIKA BELUM Memiliki Value
+        ensureDefaultSystemProperties();
+
         switchManual = findViewById(R.id.switchManual);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
         switchGameProps = findViewById(R.id.switchGameProps);
         switchThermals = findViewById(R.id.switchThermals);
-        switchAutoUpdateDevices = findViewById(R.id.switchAutoUpdateDevices);
         
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         tvAutoStatus = findViewById(R.id.tvAutoStatus);
@@ -149,9 +151,6 @@ public class MainActivity extends Activity {
         switchThermals.setChecked(thermalsState);
         panelThermalsBtn.setVisibility(thermalsState ? View.VISIBLE : View.GONE);
 
-        boolean autoUpdateDevices = sp.getBoolean("auto_update_devices", false);
-        switchAutoUpdateDevices.setChecked(autoUpdateDevices);
-
         tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
         tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
 
@@ -188,14 +187,6 @@ public class MainActivity extends Activity {
             addLog("Thermals " + (checked ? "enabled" : "disabled"));
         });
 
-        switchAutoUpdateDevices.setOnCheckedChangeListener((v, checked) -> {
-            sp.edit().putBoolean("auto_update_devices", checked).apply();
-            addLog("Auto update devices: " + (checked ? "ON" : "OFF"));
-            if (checked) {
-                new Thread(this::updateGamePropsDevicesFromOnline).start();
-            }
-        });
-
         btnUpdate.setOnClickListener(v -> new Thread(() -> checkUpdateOnline(true)).start());
         btnCopyLog.setOnClickListener(v -> copyLog());
 
@@ -220,6 +211,24 @@ public class MainActivity extends Activity {
                 updateGamePropsDevicesFromOnline();
             }
         }).start();
+    }
+
+    private void ensureDefaultSystemProperties() {
+        if (SystemPropertiesHelper.get(PROP_BOOTLOADER, "").isEmpty()) {
+            SystemPropertiesHelper.set(PROP_BOOTLOADER, "true");
+        }
+        if (SystemPropertiesHelper.get(PROP_PIF, "").isEmpty()) {
+            SystemPropertiesHelper.set(PROP_PIF, "true");
+        }
+        if (SystemPropertiesHelper.get(PROP_USE_CUSTOM, "").isEmpty()) {
+            SystemPropertiesHelper.set(PROP_USE_CUSTOM, "false");
+        }
+        if (SystemPropertiesHelper.get(PROP_THERMALS, "").isEmpty()) {
+            SystemPropertiesHelper.set(PROP_THERMALS, "false");
+        }
+        if (SystemPropertiesHelper.get(PROP_GAMEPROPS, "").isEmpty()) {
+            SystemPropertiesHelper.set(PROP_GAMEPROPS, "false");
+        }
     }
 
     private void showToast(String message) {
@@ -493,9 +502,21 @@ public class MainActivity extends Activity {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_device_manager, null);
         builder.setView(view);
 
+        Switch switchAutoUpdateDevices = view.findViewById(R.id.switchAutoUpdateDevices);
         ListView lvDevices = view.findViewById(R.id.lvDevices);
         Button btnAddDevice = view.findViewById(R.id.btnAddDevice);
         Button btnClose = view.findViewById(R.id.btnCloseDeviceDialog);
+
+        boolean autoUpdateDevices = sp.getBoolean("auto_update_devices", false);
+        switchAutoUpdateDevices.setChecked(autoUpdateDevices);
+
+        switchAutoUpdateDevices.setOnCheckedChangeListener((v, checked) -> {
+            sp.edit().putBoolean("auto_update_devices", checked).apply();
+            addLog("Auto update devices: " + (checked ? "ON" : "OFF"));
+            if (checked) {
+                new Thread(this::updateGamePropsDevicesFromOnline).start();
+            }
+        });
 
         List<String> deviceList = new ArrayList<>();
         try {
