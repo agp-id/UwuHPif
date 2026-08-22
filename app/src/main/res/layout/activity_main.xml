@@ -15,13 +15,34 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Global Switches -->
+            <!-- Switch Manual Mode -->
             <Switch
                 android:id="@+id/switchManual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Manual Mode" />
 
+            <!-- Status Auto & Last Update -->
+            <TextView
+                android:id="@+id/tvAutoStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Auto update: ON" />
+
+            <TextView
+                android:id="@+id/tvLastUpdate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last update: -" />
+
+            <!-- Tombol Check Update Online -->
+            <Button
+                android:id="@+id/btnUpdate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Check Update Online" />
+
+            <!-- Switch Toggles Basis -->
             <Switch
                 android:id="@+id/switchBootloader"
                 android:layout_width="match_parent"
@@ -34,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:text="Spoof PIF" />
 
-            <!-- GameProps Section -->
+            <!-- Section GameProps -->
             <Switch
                 android:id="@+id/switchGameProps"
                 android:layout_width="match_parent"
@@ -82,7 +103,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Thermals Section -->
+            <!-- Section Thermals -->
             <Switch
                 android:id="@+id/switchThermals"
                 android:layout_width="match_parent"
@@ -111,26 +132,7 @@
                     android:text="Reset" />
             </LinearLayout>
 
-            <!-- Status & Update Panel -->
-            <TextView
-                android:id="@+id/tvAutoStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Auto update: ON" />
-
-            <TextView
-                android:id="@+id/tvLastUpdate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Last update: -" />
-
-            <Button
-                android:id="@+id/btnUpdate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Check Update Online" />
-
-            <!-- Manual Editor Panel -->
+            <!-- Panel Manual Mode -->
             <LinearLayout
                 android:id="@+id/panelManual"
                 android:layout_width="match_parent"
@@ -176,6 +178,7 @@
                     android:text="Apply Manual PIF" />
             </LinearLayout>
 
+            <!-- Reset Persist Props -->
             <Button
                 android:id="@+id/btnResetPersist"
                 android:layout_width="match_parent"
