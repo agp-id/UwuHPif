@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.uwuh.pif"
+    package="com.uwuh.utils"
     android:sharedUserId="android.uid.system">
 
+    <!-- Izin Dasar & Booting -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Izin System App untuk Kill Google Play Services & Play Store -->
+    <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+
+    <!-- Izin Membaca Seluruh Aplikasi Terpasang (Untuk GUI GameProps & Thermals) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!-- Izin Membaca/Menulis File (File Picker & Temporary Logs) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"
-        android:label="PIF Manager"
+        android:label="UwuH"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.Settings"
         android:persistent="true"
@@ -18,7 +30,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="PIF Manager">
+            android:label="UwuH Utils">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
