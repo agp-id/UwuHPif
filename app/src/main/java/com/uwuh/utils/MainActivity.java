@@ -159,7 +159,6 @@ public class MainActivity extends Activity {
         loadLogHistory();
         loadCustomPIF();
 
-        // LISTENERS
         switchManual.setOnCheckedChangeListener((v, checked) -> {
             sp.edit().putBoolean("manual", checked).apply();
             SystemPropertiesHelper.set(PROP_USE_CUSTOM, checked ? "true" : "false");
@@ -300,7 +299,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // CHECK ONLINE HANYA UNTUK PIF & KEYBOX
     private void checkUpdateOnline(boolean showToast) {
         addLog("Checking update...");
 
@@ -342,7 +340,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // AUTO UPDATE DEVICES LIST DARI GITHUB UNTUK GAMEPROPS
     private void updateGamePropsDevicesFromOnline() {
         addLog("Syncing GameProps devices online...");
         try {
@@ -399,7 +396,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // POPUP DYNAMIC APP CONFIG (NONE ONLY IF FILE NOT FOUND)
     private void showAppConfigDialog(boolean isGameProps) {
         String tag = isGameProps ? "GameProps" : "Thermals";
         String filePath = isGameProps ? GAMEPROPS_PATH : THERMALS_PATH;
@@ -470,7 +466,6 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
-    // POPUP GAMEPROPS DEVICE MANAGER (TAMBAH/EDIT/HAPUS DEVICE)
     private void showDevicesManagerDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_device_manager, null);
@@ -519,6 +514,7 @@ public class MainActivity extends Activity {
         builder.setView(view);
 
         EditText etName = view.findViewById(R.id.etDeviceName);
+        EditText etBrand = view.findViewById(R.id.etBrand);
         EditText etManufacturer = view.findViewById(R.id.etManufacturer);
         EditText etModel = view.findViewById(R.id.etModel);
         Button btnSave = view.findViewById(R.id.btnSaveDevice);
@@ -533,6 +529,7 @@ public class MainActivity extends Activity {
                 JSONObject root = new JSONObject(readFile(GAMEPROPS_PATH));
                 JSONObject devObj = root.optJSONObject(devName);
                 if (devObj != null) {
+                    etBrand.setText(devObj.optString("BRAND", ""));
                     etManufacturer.setText(devObj.optString("MANUFACTURER", ""));
                     etModel.setText(devObj.optString("MODEL", ""));
                 }
@@ -543,11 +540,12 @@ public class MainActivity extends Activity {
 
         btnSave.setOnClickListener(v -> {
             String name = etName.getText().toString().trim();
+            String brand = etBrand.getText().toString().trim();
             String manuf = etManufacturer.getText().toString().trim();
             String model = etModel.getText().toString().trim();
 
             if (name.isEmpty() || manuf.isEmpty() || model.isEmpty()) {
-                showToast("All fields required");
+                showToast("Fields required!");
                 return;
             }
 
@@ -556,6 +554,7 @@ public class MainActivity extends Activity {
                 JSONObject devObj = isEdit && root.has(devName) ? root.getJSONObject(devName) : new JSONObject();
 
                 if (!devObj.has("PKGNAMES")) devObj.put("PKGNAMES", new JSONArray());
+                if (!brand.isEmpty()) devObj.put("BRAND", brand);
                 devObj.put("MANUFACTURER", manuf);
                 devObj.put("MODEL", model);
 
