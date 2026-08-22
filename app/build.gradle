@@ -23,6 +23,7 @@ android {
             minifyEnabled true
             shrinkResources true
             debuggable false
+            signingConfig signingConfigs.debug
 
             // Aturan pengacakan kode
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
