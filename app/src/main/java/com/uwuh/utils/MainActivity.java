@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.text.Selection;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -95,7 +96,7 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
-        // INISIALISASI DEFAULT PERSIST SYSTEM PROPERTIES JIKA BELUM Memiliki Value
+        // Inisialisasi default persist System Properties jika belum bernilai
         ensureDefaultSystemProperties();
 
         switchManual = findViewById(R.id.switchManual);
@@ -128,7 +129,6 @@ public class MainActivity extends Activity {
         tvLog.setFocusableInTouchMode(false);
         tvLog.setLongClickable(false);
         tvLog.setKeyListener(null);
-        tvLog.setMovementMethod(new ScrollingMovementMethod());
 
         enableInnerScroll(etPifEditor);
         enableInnerScroll(tvLog);
@@ -281,7 +281,12 @@ public class MainActivity extends Activity {
         mainHandler.post(() -> {
             StringBuilder sb = new StringBuilder();
             for (String line : logLines) sb.append(line).append("\n");
-            tvLog.setText(sb.toString().trim());
+            String fullLog = sb.toString().trim();
+            tvLog.setText(fullLog);
+            
+            if (!fullLog.isEmpty()) {
+                Selection.setSelection(tvLog.getText(), fullLog.length());
+            }
         });
     }
 
@@ -591,12 +596,16 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            if (brand.isEmpty()) {
+                brand = manuf;
+            }
+
             try {
                 JSONObject root = new File(GAMEPROPS_PATH).exists() ? new JSONObject(readFile(GAMEPROPS_PATH)) : new JSONObject();
                 JSONObject devObj = isEdit && root.has(devName) ? root.getJSONObject(devName) : new JSONObject();
 
                 if (!devObj.has("PKGNAMES")) devObj.put("PKGNAMES", new JSONArray());
-                if (!brand.isEmpty()) devObj.put("BRAND", brand);
+                devObj.put("BRAND", brand);
                 devObj.put("MANUFACTURER", manuf);
                 devObj.put("MODEL", model);
 
