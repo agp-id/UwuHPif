@@ -76,7 +76,7 @@ public class AppConfigAdapter extends BaseAdapter {
         if (selectedIndex >= 0) {
             holder.spConfigOption.setSelection(selectedIndex);
         } else {
-            holder.spConfigOption.setSelection(0); // "None"
+            holder.spConfigOption.setSelection(0);
         }
 
         holder.spConfigOption.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
