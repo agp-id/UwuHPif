@@ -1,292 +1,201 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <!-- ==================== CONFIG TOGGLES ==================== -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Konfigurasi"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Switch
-            android:id="@+id/switchBootloader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Enable Bootloader Spoof"
-            android:textSize="14sp" />
-
-        <Switch
-            android:id="@+id/switchPIF"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Enable PIF Spoof"
-            android:textSize="14sp" />
-
-        <!-- ==================== MODE ==================== -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Mode"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Switch
-            android:id="@+id/switchManual"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Manual Mode"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/tvAutoStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Auto update: ON"
-            android:textSize="12sp"
-            android:textColor="#555555"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/tvLastUpdate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Last update: -"
-            android:textSize="12sp"
-            android:textColor="#555555"
-            android:visibility="gone" />
-
-        <Button
-            android:id="@+id/btnUpdate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="UPDATE" />
-
-        <!-- ==================== MANUAL MODE ==================== -->
         <LinearLayout
-            android:id="@+id/panelManual"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginTop="8dp">
+            android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Manual Settings"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <Button
-                android:id="@+id/btnPickKeybox"
+            <!-- Global Switches -->
+            <Switch
+                android:id="@+id/switchManual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Pilih Keybox (.xml)" />
+                android:text="Manual Mode" />
 
-            <TextView
-                android:id="@+id/tvKeyboxLastApply"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Last apply: -"
-                android:textSize="11sp"
-                android:textColor="#888888"
-                android:layout_marginTop="2dp" />
-
-            <Button
-                android:id="@+id/btnPickPIF"
+            <Switch
+                android:id="@+id/switchBootloader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Pilih PIF (.prop / .json)" />
+                android:text="Spoof Bootloader" />
 
+            <Switch
+                android:id="@+id/switchPIF"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Spoof PIF" />
+
+            <!-- GameProps Section -->
+            <Switch
+                android:id="@+id/switchGameProps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable GameProps" />
+
+            <LinearLayout
+                android:id="@+id/panelGamePropsBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <Switch
+                    android:id="@+id/switchAutoUpdateDevices"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Auto Update Devices List" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnGameProps"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Edit App Config" />
+
+                    <Button
+                        android:id="@+id/btnDevices"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Devices" />
+
+                    <Button
+                        android:id="@+id/btnResetGameProps"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Reset" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Thermals Section -->
+            <Switch
+                android:id="@+id/switchThermals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable Per-App Thermals" />
+
+            <LinearLayout
+                android:id="@+id/panelThermalsBtn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btnThermals"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Edit Thermals" />
+
+                <Button
+                    android:id="@+id/btnResetThermals"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Reset" />
+            </LinearLayout>
+
+            <!-- Status & Update Panel -->
             <TextView
-                android:id="@+id/tvPifLastApply"
+                android:id="@+id/tvAutoStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Last apply: -"
-                android:textSize="11sp"
-                android:textColor="#888888"
-                android:layout_marginTop="2dp" />
+                android:text="Auto update: ON" />
 
             <TextView
+                android:id="@+id/tvLastUpdate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Custom PIF Editor"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:text="Last update: -" />
 
+            <Button
+                android:id="@+id/btnUpdate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Check Update Online" />
+
+            <!-- Manual Editor Panel -->
+            <LinearLayout
+                android:id="@+id/panelManual"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <Button
+                    android:id="@+id/btnPickKeybox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pick Custom Keybox" />
+
+                <TextView
+                    android:id="@+id/tvKeyboxLastApply"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last apply: -" />
+
+                <Button
+                    android:id="@+id/btnPickPIF"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pick Custom PIF" />
+
+                <TextView
+                    android:id="@+id/tvPifLastApply"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last apply: -" />
+
+                <EditText
+                    android:id="@+id/etPifEditor"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:gravity="top"
+                    android:inputType="textMultiLine" />
+
+                <Button
+                    android:id="@+id/btnApplyManual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Apply Manual PIF" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnResetPersist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reset Persist Props" />
+
+            <!-- Log Viewer -->
             <EditText
-                android:id="@+id/etPifEditor"
+                android:id="@+id/tvLog"
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
-                android:layout_marginTop="4dp"
-                android:background="#F5F5F5"
-                android:gravity="top|start"
-                android:padding="8dp"
-                android:textSize="12sp"
-                android:typeface="monospace"
-                android:textColor="#000000"
-                android:inputType="textMultiLine|textNoSuggestions"
-                android:scrollbars="vertical"
-                android:overScrollMode="always"
-                android:isScrollContainer="true" />
-
-            <Button
-                android:id="@+id/btnApplyManual"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="APPLY"
-                android:enabled="false" />
-
-        </LinearLayout>
-
-        <!-- ==================== EDITOR: GAMEPROPS ==================== -->
-        <Switch
-            android:id="@+id/switchGameProps"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Enable GameProps"
-            android:textSize="14sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp"
-            android:visibility="gone"
-            android:id="@+id/panelGamePropsBtn">
-
-            <Button
-                android:id="@+id/btnGameProps"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Edit App Config" />
-
-            <Button
-                android:id="@+id/btnResetGameProps"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Reset Config"
-                android:layout_marginLeft="4dp" />
-        </LinearLayout>
-
-        <!-- ==================== EDITOR: THERMALS ==================== -->
-        <Switch
-            android:id="@+id/switchThermals"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Enable Thermals"
-            android:textSize="14sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp"
-            android:visibility="gone"
-            android:id="@+id/panelThermalsBtn">
-
-            <Button
-                android:id="@+id/btnThermals"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Edit App Config" />
-
-            <Button
-                android:id="@+id/btnResetThermals"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Reset Config"
-                android:layout_marginLeft="4dp" />
-        </LinearLayout>
-
-        <!-- ==================== RESET ==================== -->
-        <Button
-            android:id="@+id/btnResetPersist"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Reset Configuration" />
-
-        <!-- ==================== DIVIDER ==================== -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:background="#CCCCCC" />
-
-        <!-- ==================== LOG VIEWER HEADER ==================== -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="12dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="=== Log ==="
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:layout_height="120dp"
+                android:gravity="top"
+                android:text="[Log ready]" />
 
             <Button
                 android:id="@+id/btnCopyLog"
-                style="?android:attr/buttonStyleSmall"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Copy"
-                android:textSize="11sp"
-                android:gravity="center"
-                android:includeFontPadding="false"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:minHeight="0dp"
-                android:minWidth="0dp" />
+                android:text="Copy Log" />
+
         </LinearLayout>
-
-        <!-- ==================== LOG VIEWER TEXTBOX ==================== -->
-        <EditText
-            android:id="@+id/tvLog"
-            android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:layout_marginTop="4dp"
-            android:background="#1A1A1A"
-            android:padding="8dp"
-            android:text="[Log ready]"
-            android:textColor="#00FF00"
-            android:textSize="10sp"
-            android:typeface="monospace"
-            android:inputType="textMultiLine|textNoSuggestions"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"
-            android:isScrollContainer="true" />
-
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</LinearLayout>
