@@ -21,6 +21,7 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -52,18 +53,18 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String DIR = "/data/system/uwuh";
-    private static final String LOCAL_DIR = "/data/local/uwuh";
     
     private static final String KB_PATH = DIR + "/keybox.xml";
     private static final String PIF_PATH = DIR + "/pif.prop";
     private static final String CUST_KB_PATH = DIR + "/cust_keybox.xml";
     private static final String CUST_PIF_PATH = DIR + "/cust_pif.prop";
-    private static final String GAMEPROPS_PATH = LOCAL_DIR + "/gameprops.json";
-    private static final String THERMALS_PATH = LOCAL_DIR + "/per_app_thermals.json";
-    private static final String LOG_FILE_PATH = LOCAL_DIR + "/app_session.log";
+    private static final String GAMEPROPS_PATH = DIR + "/gameprops.json";
+    private static final String THERMALS_PATH = DIR + "/per_app_thermals.json";
+    private static final String LOG_FILE_PATH = DIR + "/app_session.log";
     
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
+    private static final String URL_GAMEPROPS_DEVICES = "https://raw.githubusercontent.com/user/repo/main/gameprops_devices.json";
     
     private static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
     private static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
@@ -71,7 +72,6 @@ public class MainActivity extends Activity {
     private static final String PROP_THERMALS = "persist.sys.oemports10t.utils.perapp_thermals";
     private static final String PROP_GAMEPROPS = "persist.sys.oemports10t.utils.gameprops";
     
-    // Log Viewer & Toast Manager
     private static final int MAX_LOG_LINES = 20;
     private LinkedList<String> logLines = new LinkedList<>();
     private EditText tvLog;
@@ -81,12 +81,12 @@ public class MainActivity extends Activity {
 
     private SharedPreferences sp;
     private Switch switchManual, switchBootloader, switchPIF;
-    private Switch switchGameProps, switchThermals;
+    private Switch switchGameProps, switchThermals, switchAutoUpdateDevices;
     private TextView tvLastUpdate, tvAutoStatus;
     private TextView tvKeyboxLastApply, tvPifLastApply;
     private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
     private EditText etPifEditor;
-    private Button btnUpdate, btnApplyManual, btnGameProps, btnThermals;
+    private Button btnUpdate, btnApplyManual, btnGameProps, btnDevices, btnThermals;
     private Button btnResetGameProps, btnResetThermals;
 
     @Override
@@ -96,12 +96,13 @@ public class MainActivity extends Activity {
 
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
-        // Init views
         switchManual = findViewById(R.id.switchManual);
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
         switchGameProps = findViewById(R.id.switchGameProps);
         switchThermals = findViewById(R.id.switchThermals);
+        switchAutoUpdateDevices = findViewById(R.id.switchAutoUpdateDevices);
+        
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         tvAutoStatus = findViewById(R.id.tvAutoStatus);
         tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
@@ -112,12 +113,13 @@ public class MainActivity extends Activity {
         etPifEditor = findViewById(R.id.etPifEditor);
         btnUpdate = findViewById(R.id.btnUpdate);
         btnApplyManual = findViewById(R.id.btnApplyManual);
+        
         btnGameProps = findViewById(R.id.btnGameProps);
+        btnDevices = findViewById(R.id.btnDevices);
         btnThermals = findViewById(R.id.btnThermals);
         btnResetGameProps = findViewById(R.id.btnResetGameProps);
         btnResetThermals = findViewById(R.id.btnResetThermals);
 
-        // Log viewer setup
         tvLog = findViewById(R.id.tvLog);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
@@ -130,7 +132,6 @@ public class MainActivity extends Activity {
         enableInnerScroll(etPifEditor);
         enableInnerScroll(tvLog);
 
-        // Load persistent states
         boolean isManual = sp.getBoolean("manual", false);
         switchManual.setChecked(isManual);
         updateUIState(isManual);
@@ -143,19 +144,19 @@ public class MainActivity extends Activity {
         switchBootloader.setChecked(bootloaderState);
         switchPIF.setChecked(pifState);
         
-        // SINKRONISASI TAMPILAN PANEL EDIT/RESET SAAT APP DIBUKA
         switchGameProps.setChecked(gamePropsState);
         panelGamePropsBtn.setVisibility(gamePropsState ? View.VISIBLE : View.GONE);
 
         switchThermals.setChecked(thermalsState);
         panelThermalsBtn.setVisibility(thermalsState ? View.VISIBLE : View.GONE);
 
+        boolean autoUpdateDevices = sp.getBoolean("auto_update_devices", false);
+        switchAutoUpdateDevices.setChecked(autoUpdateDevices);
+
         tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
         tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
 
-        // Load log file (otomatis reset jika baru saja direboot)
         loadLogHistory();
-
         loadCustomPIF();
 
         // LISTENERS
@@ -189,14 +190,19 @@ public class MainActivity extends Activity {
             addLog("Thermals " + (checked ? "enabled" : "disabled"));
         });
 
-        btnUpdate.setOnClickListener(v -> new Thread(() -> {
-            checkUpdateOnline(true);
-        }).start());
+        switchAutoUpdateDevices.setOnCheckedChangeListener((v, checked) -> {
+            sp.edit().putBoolean("auto_update_devices", checked).apply();
+            addLog("Auto update devices: " + (checked ? "ON" : "OFF"));
+            if (checked) {
+                new Thread(this::updateGamePropsDevicesFromOnline).start();
+            }
+        });
 
+        btnUpdate.setOnClickListener(v -> new Thread(() -> checkUpdateOnline(true)).start());
         btnCopyLog.setOnClickListener(v -> copyLog());
 
-        // BUKA GUI POPUP
         btnGameProps.setOnClickListener(v -> showAppConfigDialog(true));
+        btnDevices.setOnClickListener(v -> showDevicesManagerDialog());
         btnThermals.setOnClickListener(v -> showAppConfigDialog(false));
         
         btnResetGameProps.setOnClickListener(v -> resetGameProps());
@@ -213,27 +219,22 @@ public class MainActivity extends Activity {
             if (!sp.getBoolean("manual", false)) {
                 checkUpdateOnline(false);
             }
+            if (sp.getBoolean("auto_update_devices", false)) {
+                updateGamePropsDevicesFromOnline();
+            }
         }).start();
     }
 
-    // ==================== INSTANT TOAST HELPER ====================
-
     private void showToast(String message) {
         runOnUiThread(() -> {
-            if (currentToast != null) {
-                currentToast.cancel();
-            }
+            if (currentToast != null) currentToast.cancel();
             currentToast = Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT);
             currentToast.show();
         });
     }
 
-    // ==================== LOG PERSISTENCE (AUTO CLEAN ON REBOOT) ====================
-
     private void loadLogHistory() {
         File logFile = new File(LOG_FILE_PATH);
-        
-        // Hapus log lama jika file dibuat SEBELUM reboot terakhir
         long bootTime = System.currentTimeMillis() - SystemClock.elapsedRealtime();
         if (logFile.exists() && logFile.lastModified() < bootTime) {
             logFile.delete();
@@ -244,9 +245,7 @@ public class MainActivity extends Activity {
             if (!savedLogs.isEmpty()) {
                 String[] lines = savedLogs.split("\n");
                 for (String line : lines) {
-                    if (!line.trim().isEmpty()) {
-                        logLines.add(line);
-                    }
+                    if (!line.trim().isEmpty()) logLines.add(line);
                 }
                 updateLogView();
             }
@@ -259,9 +258,7 @@ public class MainActivity extends Activity {
         String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
         String logMsg = "[" + timestamp + "] " + msg;
         
-        if (logLines.size() >= MAX_LOG_LINES) {
-            logLines.removeFirst();
-        }
+        if (logLines.size() >= MAX_LOG_LINES) logLines.removeFirst();
         logLines.add(logMsg);
         
         saveLogToFile();
@@ -270,23 +267,17 @@ public class MainActivity extends Activity {
 
     private void saveLogToFile() {
         StringBuilder sb = new StringBuilder();
-        for (String line : logLines) {
-            sb.append(line).append("\n");
-        }
+        for (String line : logLines) sb.append(line).append("\n");
         writeFile(LOG_FILE_PATH, sb.toString().trim());
     }
 
     private void updateLogView() {
         mainHandler.post(() -> {
             StringBuilder sb = new StringBuilder();
-            for (String line : logLines) {
-                sb.append(line).append("\n");
-            }
+            for (String line : logLines) sb.append(line).append("\n");
             tvLog.setText(sb.toString().trim());
         });
     }
-
-    // ==================== CHECK & FALLBACK INITIALIZATION ====================
 
     private void applyFallback() {
         try {
@@ -301,20 +292,15 @@ public class MainActivity extends Activity {
 
     private void checkAndCreateFallback(String path, int rawResId, String tag) {
         File file = new File(path);
-        if (file.exists()) {
-            addLog(tag + " file exists");
-        } else {
+        if (!file.exists()) {
             String data = readRaw(rawResId);
             if (!data.isEmpty() && writeFile(path, data)) {
                 addLog(tag + " created from fallback");
-            } else {
-                addLog("Failed to create " + tag + " fallback");
             }
         }
     }
 
-    // ==================== ONLINE UPDATE LOGIC ====================
-
+    // CHECK ONLINE HANYA UNTUK PIF & KEYBOX
     private void checkUpdateOnline(boolean showToast) {
         addLog("Checking update...");
 
@@ -326,15 +312,11 @@ public class MainActivity extends Activity {
             boolean pifUpdated = false;
 
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(readFile(KB_PATH))) {
-                if (writeFile(KB_PATH, newKb)) {
-                    kbUpdated = true;
-                }
+                if (writeFile(KB_PATH, newKb)) kbUpdated = true;
             }
 
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(readFile(PIF_PATH))) {
-                if (writeFile(PIF_PATH, newPif)) {
-                    pifUpdated = true;
-                }
+                if (writeFile(PIF_PATH, newPif)) pifUpdated = true;
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
@@ -344,35 +326,98 @@ public class MainActivity extends Activity {
 
             runOnUiThread(() -> {
                 tvLastUpdate.setText("Last update: " + date);
-                if (showToast) {
-                    showToast(isAnyUpdated ? "Files updated!" : "Already latest.");
-                }
+                if (showToast) showToast(isAnyUpdated ? "Files updated!" : "Already latest.");
             });
 
-            if (kbUpdated && pifUpdated) {
-                addLog("pif & keybox updated");
-                killGMSAndVending();
-            } else if (pifUpdated) {
-                addLog("pif updated");
-                killGMSAndVending();
-            } else if (kbUpdated) {
-                addLog("keybox updated");
+            if (kbUpdated || pifUpdated) {
+                addLog("Online update applied");
                 killGMSAndVending();
             } else {
                 addLog("Already latest");
             }
 
         } catch (Exception e) {
-            addLog("failed");
+            addLog("Update failed");
             if (showToast) showToast("Update failed");
         }
     }
 
-    // ==================== GUI POPUP DIALOG LOGIC ====================
+    // AUTO UPDATE DEVICES LIST DARI GITHUB UNTUK GAMEPROPS
+    private void updateGamePropsDevicesFromOnline() {
+        addLog("Syncing GameProps devices online...");
+        try {
+            String onlineJson = fetch(URL_GAMEPROPS_DEVICES);
+            if (onlineJson == null || onlineJson.isEmpty()) {
+                addLog("Sync devices failed: Empty response");
+                return;
+            }
 
+            JSONObject onlineDevices = new JSONObject(onlineJson);
+            File localFile = new File(GAMEPROPS_PATH);
+            JSONObject root = localFile.exists() ? new JSONObject(readFile(GAMEPROPS_PATH)) : new JSONObject();
+
+            boolean changed = false;
+            Iterator<String> keys = onlineDevices.keys();
+
+            while (keys.hasNext()) {
+                String devName = keys.next();
+                JSONObject onlineDevObj = onlineDevices.getJSONObject(devName);
+
+                if (root.has(devName)) {
+                    JSONObject localDevObj = root.getJSONObject(devName);
+                    Iterator<String> attrKeys = onlineDevObj.keys();
+                    while (attrKeys.hasNext()) {
+                        String attr = attrKeys.next();
+                        if (!attr.equals("PKGNAMES")) {
+                            String newVal = onlineDevObj.getString(attr);
+                            if (!localDevObj.optString(attr).equals(newVal)) {
+                                localDevObj.put(attr, newVal);
+                                changed = true;
+                            }
+                        }
+                    }
+                } else {
+                    JSONObject newDevObj = new JSONObject(onlineDevObj.toString());
+                    if (!newDevObj.has("PKGNAMES")) {
+                        newDevObj.put("PKGNAMES", new JSONArray());
+                    }
+                    root.put(devName, newDevObj);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                if (writeFile(GAMEPROPS_PATH, root.toString(4))) {
+                    addLog("GameProps devices updated from online");
+                    showToast("Devices synced!");
+                }
+            } else {
+                addLog("Devices already up to date");
+            }
+        } catch (Exception e) {
+            addLog("Sync devices error");
+        }
+    }
+
+    // POPUP DYNAMIC APP CONFIG (NONE ONLY IF FILE NOT FOUND)
     private void showAppConfigDialog(boolean isGameProps) {
         String tag = isGameProps ? "GameProps" : "Thermals";
-        addLog("Opening " + tag + " app config GUI...");
+        String filePath = isGameProps ? GAMEPROPS_PATH : THERMALS_PATH;
+        File file = new File(filePath);
+
+        List<String> options = new ArrayList<>();
+        options.add("None");
+
+        if (file.exists()) {
+            try {
+                JSONObject root = new JSONObject(readFile(filePath));
+                Iterator<String> keys = root.keys();
+                while (keys.hasNext()) {
+                    String k = keys.next();
+                    if (!k.equals("DEFAULT")) options.add(k);
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_app_config, null);
@@ -386,20 +431,8 @@ public class MainActivity extends Activity {
 
         tvTitle.setText(isGameProps ? "GameProps App Config" : "Thermals App Config");
 
-        List<String> options = new ArrayList<>();
-        options.add("None");
-        if (isGameProps) {
-            options.add("device1");
-            options.add("device2");
-            options.add("device3");
-        } else {
-            options.add("1");
-            options.add("2");
-            options.add("3");
-        }
-
-        String jsonString = readFile(isGameProps ? GAMEPROPS_PATH : THERMALS_PATH);
-        HashMap<String, String> currentMap = parseJsonToMap(jsonString, isGameProps);
+        String jsonString = file.exists() ? readFile(filePath) : "";
+        HashMap<String, String> currentMap = parseJsonToMap(jsonString);
 
         PackageManager pm = getPackageManager();
         List<PackageInfo> installedPackages = pm.getInstalledPackages(0);
@@ -417,22 +450,15 @@ public class MainActivity extends Activity {
         AppConfigAdapter adapter = new AppConfigAdapter(this, filterApps(allApps, false), options);
         lvList.setAdapter(adapter);
 
-        switchSystem.setOnCheckedChangeListener((v, isChecked) -> {
-            adapter.updateList(filterApps(allApps, isChecked));
-        });
+        switchSystem.setOnCheckedChangeListener((v, isChecked) -> adapter.updateList(filterApps(allApps, isChecked)));
 
         AlertDialog dialog = builder.create();
-
-        btnCancel.setOnClickListener(v -> {
-            addLog(tag + " config GUI cancelled");
-            dialog.dismiss();
-        });
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
 
         btnSave.setOnClickListener(v -> {
-            boolean success = saveMapToJson(allApps, isGameProps);
-
+            boolean success = saveMapToJson(allApps, isGameProps, filePath);
             if (success) {
-                addLog(tag + " config saved successfully via GUI");
+                addLog(tag + " config saved");
                 showToast("Configuration saved!");
             } else {
                 addLog(tag + " config save failed");
@@ -444,17 +470,145 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
+    // POPUP GAMEPROPS DEVICE MANAGER (TAMBAH/EDIT/HAPUS DEVICE)
+    private void showDevicesManagerDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_device_manager, null);
+        builder.setView(view);
+
+        ListView lvDevices = view.findViewById(R.id.lvDevices);
+        Button btnAddDevice = view.findViewById(R.id.btnAddDevice);
+        Button btnClose = view.findViewById(R.id.btnCloseDeviceDialog);
+
+        List<String> deviceList = new ArrayList<>();
+        try {
+            File f = new File(GAMEPROPS_PATH);
+            if (f.exists()) {
+                JSONObject root = new JSONObject(readFile(GAMEPROPS_PATH));
+                Iterator<String> keys = root.keys();
+                while (keys.hasNext()) {
+                    String k = keys.next();
+                    if (!k.equals("DEFAULT")) deviceList.add(k);
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, deviceList);
+        lvDevices.setAdapter(adapter);
+
+        AlertDialog dialog = builder.create();
+
+        lvDevices.setOnItemClickListener((parent, v, position, id) -> {
+            String selectedDevice = deviceList.get(position);
+            showEditDeviceDialog(selectedDevice, () -> showDevicesManagerDialog());
+            dialog.dismiss();
+        });
+
+        btnAddDevice.setOnClickListener(v -> {
+            showEditDeviceDialog(null, () -> showDevicesManagerDialog());
+            dialog.dismiss();
+        });
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private void showEditDeviceDialog(String devName, Runnable onComplete) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_device, null);
+        builder.setView(view);
+
+        EditText etName = view.findViewById(R.id.etDeviceName);
+        EditText etManufacturer = view.findViewById(R.id.etManufacturer);
+        EditText etModel = view.findViewById(R.id.etModel);
+        Button btnSave = view.findViewById(R.id.btnSaveDevice);
+        Button btnDelete = view.findViewById(R.id.btnDeleteDevice);
+
+        boolean isEdit = (devName != null);
+        btnDelete.setVisibility(isEdit ? View.VISIBLE : View.GONE);
+
+        if (isEdit) {
+            etName.setText(devName);
+            try {
+                JSONObject root = new JSONObject(readFile(GAMEPROPS_PATH));
+                JSONObject devObj = root.optJSONObject(devName);
+                if (devObj != null) {
+                    etManufacturer.setText(devObj.optString("MANUFACTURER", ""));
+                    etModel.setText(devObj.optString("MODEL", ""));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+
+        AlertDialog dialog = builder.create();
+
+        btnSave.setOnClickListener(v -> {
+            String name = etName.getText().toString().trim();
+            String manuf = etManufacturer.getText().toString().trim();
+            String model = etModel.getText().toString().trim();
+
+            if (name.isEmpty() || manuf.isEmpty() || model.isEmpty()) {
+                showToast("All fields required");
+                return;
+            }
+
+            try {
+                JSONObject root = new File(GAMEPROPS_PATH).exists() ? new JSONObject(readFile(GAMEPROPS_PATH)) : new JSONObject();
+                JSONObject devObj = isEdit && root.has(devName) ? root.getJSONObject(devName) : new JSONObject();
+
+                if (!devObj.has("PKGNAMES")) devObj.put("PKGNAMES", new JSONArray());
+                devObj.put("MANUFACTURER", manuf);
+                devObj.put("MODEL", model);
+
+                if (isEdit && !devName.equals(name)) root.remove(devName);
+                root.put(name, devObj);
+
+                if (writeFile(GAMEPROPS_PATH, root.toString(4))) {
+                    addLog("Device " + name + " saved");
+                    showToast("Device saved");
+                } else {
+                    addLog("Device save failed");
+                    showToast("Failed to save device");
+                }
+            } catch (Exception e) {
+                addLog("Device save error");
+                showToast("Error saving device");
+            }
+            dialog.dismiss();
+            if (onComplete != null) onComplete.run();
+        });
+
+        btnDelete.setOnClickListener(v -> {
+            try {
+                JSONObject root = new JSONObject(readFile(GAMEPROPS_PATH));
+                if (root.has(devName)) {
+                    root.remove(devName);
+                    if (writeFile(GAMEPROPS_PATH, root.toString(4))) {
+                        addLog("Device " + devName + " deleted");
+                        showToast("Device deleted");
+                    } else {
+                        addLog("Delete device failed");
+                        showToast("Delete failed");
+                    }
+                }
+            } catch (Exception e) {
+                addLog("Delete device error");
+            }
+            dialog.dismiss();
+            if (onComplete != null) onComplete.run();
+        });
+
+        dialog.show();
+    }
+
     private List<AppModel> filterApps(List<AppModel> list, boolean showSystem) {
         List<AppModel> filtered = new ArrayList<>();
         for (AppModel app : list) {
-            if (showSystem || !app.isSystem()) {
-                filtered.add(app);
-            }
+            if (showSystem || !app.isSystem()) filtered.add(app);
         }
         return filtered;
     }
 
-    private HashMap<String, String> parseJsonToMap(String jsonString, boolean isGameProps) {
+    private HashMap<String, String> parseJsonToMap(String jsonString) {
         HashMap<String, String> map = new HashMap<>();
         if (jsonString == null || jsonString.isEmpty()) return map;
 
@@ -473,22 +627,20 @@ public class MainActivity extends Activity {
                     }
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         return map;
     }
 
-    private boolean saveMapToJson(List<AppModel> allApps, boolean isGameProps) {
+    private boolean saveMapToJson(List<AppModel> allApps, boolean isGameProps, String path) {
         try {
-            JSONObject root = new JSONObject();
+            File file = new File(path);
+            JSONObject root = file.exists() ? new JSONObject(readFile(path)) : new JSONObject();
 
-            if (!isGameProps) {
+            if (!isGameProps && !root.has("DEFAULT")) {
                 root.put("DEFAULT", "0");
             }
 
             HashMap<String, JSONArray> configGroups = new HashMap<>();
-
             for (AppModel app : allApps) {
                 String config = app.getSelectedConfig();
                 if (!config.equals("None")) {
@@ -499,28 +651,17 @@ public class MainActivity extends Activity {
                 }
             }
 
-            for (String configKey : configGroups.keySet()) {
-                JSONObject configObj = new JSONObject();
-                configObj.put("PKGNAMES", configGroups.get(configKey));
-
-                if (isGameProps) {
-                    configObj.put("MANUFACTURER", "Xiaomi");
-                    configObj.put("MODEL", "2201122C");
-                } else {
-                    configObj.put("THERMAL_PROFILE", configKey);
-                }
-
-                root.put(configKey, configObj);
+            Iterator<String> keys = root.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                if (k.equals("DEFAULT")) continue;
+                JSONObject obj = root.getJSONObject(k);
+                obj.put("PKGNAMES", configGroups.containsKey(k) ? configGroups.get(k) : new JSONArray());
             }
 
-            String path = isGameProps ? GAMEPROPS_PATH : THERMALS_PATH;
             return writeFile(path, root.toString(4));
-        } catch (Exception e) {
-            return false;
-        }
+        } catch (Exception e) { return false; }
     }
-
-    // ==================== UTILITIES & MANUAL APPLY ====================
 
     @SuppressLint("ClickableViewAccessibility")
     private void enableInnerScroll(EditText editText) {
@@ -661,7 +802,6 @@ public class MainActivity extends Activity {
 
     private void createDirectories() {
         new File(DIR).mkdirs();
-        new File(LOCAL_DIR).mkdirs();
     }
 
     private void applyManualPIF() {
@@ -686,7 +826,7 @@ public class MainActivity extends Activity {
             sp.edit().putString("pif_last_apply", time).apply();
             tvPifLastApply.setText("Last apply: " + time);
             
-            addLog("Custom PIF applied & saved successfully");
+            addLog("Custom PIF applied successfully");
             showToast("Custom PIF applied!");
             
             if (switchManual.isChecked()) forceReloadPIF();
@@ -742,8 +882,8 @@ public class MainActivity extends Activity {
                         showToast("Custom PIF saved!");
                         killGMSAndVending();
                     } else {
-                        addLog("Custom PIF save/validation failed");
-                        showToast("PIF save/validation failed");
+                        addLog("Custom PIF save failed");
+                        showToast("PIF save failed");
                     }
                 }
             }).start();
@@ -789,11 +929,21 @@ public class MainActivity extends Activity {
 
     private boolean writeFile(String path, String content) {
         try {
-            File dir = new File(path).getParentFile();
-            if (!dir.exists()) dir.mkdirs();
-            FileOutputStream f = new FileOutputStream(path);
+            File file = new File(path);
+            File dir = file.getParentFile();
+            if (dir != null && !dir.exists()) {
+                dir.mkdirs();
+                dir.setReadable(true, true);
+                dir.setWritable(true, true);
+                dir.setExecutable(true, true);
+            }
+            
+            FileOutputStream f = new FileOutputStream(file);
             f.write(content.getBytes());
             f.close();
+
+            file.setReadable(true, true);
+            file.setWritable(true, true);
             return true;
         } catch (Exception e) { return false; }
     }
