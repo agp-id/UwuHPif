@@ -1,38 +1,29 @@
-name: Build UwuH APK
-
+name: Build PIF APK
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
-
+      
       - name: Setup Gradle 8.5
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.5'
-
-      # Build Release APK
-      - name: Build Release APK
-        run: gradle clean assembleRelease
-
-      # Rename output APK menjadi UwuH.apk
-      - name: Prepare APK Artifact
-        run: |
-          mkdir -p output/
-          cp app/build/outputs/apk/release/*.apk output/UwuH.apk
-
-      # Upload Artifact UwuH.apk
+      
+      - name: Build with Gradle
+        run: gradle clean assembleDebug
+        
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UwuH.apk
-          path: output/UwuH.apk
+          name: pif-app
+          path: "**/build/outputs/apk/debug/app-debug.apk"
