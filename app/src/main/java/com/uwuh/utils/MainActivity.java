@@ -209,7 +209,6 @@ public class MainActivity extends Activity {
         findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile(101));
         findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile(102));
         btnApplyManual.setOnClickListener(v -> applyManualPIF());
-        findViewById(R.id.btnResetPersist).setOnClickListener(v -> resetPersistProps());
 
         new Thread(() -> {
             createDirectories();
@@ -430,7 +429,6 @@ public class MainActivity extends Activity {
                         options.add(key);
                         labelToKeyMap.put(key, key);
                     } else {
-                        // Jika ada di strings.xml gunakan namanya, jika tidak gunakan fallback "Thermal Profile X"
                         String label = thermalNameMap.containsKey(key) ? thermalNameMap.get(key) : "Thermal Profile " + key;
                         options.add(label);
                         labelToKeyMap.put(label, key);
@@ -642,7 +640,6 @@ public class MainActivity extends Activity {
                 JSONObject obj = root.optJSONObject(key);
                 if (obj == null) continue;
 
-                // Membaca array PKGNAMES secara aman
                 JSONArray pkgs = obj.optJSONArray("PKGNAMES");
                 if (pkgs != null) {
                     String displayLabel = isGameProps ? key : (thermalNameMap.containsKey(key) ? thermalNameMap.get(key) : "Thermal Profile " + key);
@@ -679,7 +676,6 @@ public class MainActivity extends Activity {
             while (keys.hasNext()) {
                 String k = keys.next();
                 JSONObject obj = root.getJSONObject(k);
-                // Hanya memperbarui PKGNAMES, mempertahankan semua variabel bawaan/custom di JSON
                 obj.put("PKGNAMES", configGroups.containsKey(k) ? configGroups.get(k) : new JSONArray());
             }
 
@@ -912,28 +908,6 @@ public class MainActivity extends Activity {
                 }
             }).start();
         }
-    }
-
-    private void resetPersistProps() {
-        SystemPropertiesHelper.set(PROP_BOOTLOADER, "true");
-        SystemPropertiesHelper.set(PROP_PIF, "true");
-        SystemPropertiesHelper.set(PROP_USE_CUSTOM, "false");
-        SystemPropertiesHelper.set(PROP_THERMALS, "false");
-        SystemPropertiesHelper.set(PROP_GAMEPROPS, "false");
-
-        addLog("Configuration reset");
-        runOnUiThread(() -> {
-            switchBootloader.setChecked(true);
-            switchPIF.setChecked(true);
-            switchManual.setChecked(false);
-            switchGameProps.setChecked(false);
-            switchThermals.setChecked(false);
-
-            panelGamePropsBtn.setVisibility(View.GONE);
-            panelThermalsBtn.setVisibility(View.GONE);
-
-            showToast("Configuration reset");
-        });
     }
 
     private void killGMSAndVending() {
