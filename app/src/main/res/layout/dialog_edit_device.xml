@@ -6,40 +6,86 @@
     android:padding="16dp">
 
     <TextView
+        android:id="@+id/tvDeviceDialogTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Edit Device Config"
+        android:text="Device Configuration"
         android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <!-- Device Name -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Device Name:"
+        android:textSize="13sp"
         android:textStyle="bold" />
 
     <EditText
         android:id="@+id/etDeviceName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Device Profile Name (e.g. BS4)" />
+        android:hint="e.g. ROG Phone 7"
+        android:inputType="text"
+        android:textSize="13sp" />
 
-    <EditText
-        android:id="@+id/etBrand"
-        android:layout_width="match_parent"
+    <!-- Manufacturer -->
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="BRAND (e.g. blackshark)" />
+        android:layout_marginTop="8dp"
+        android:text="Manufacturer:"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/etManufacturer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="MANUFACTURER (e.g. blackshark)" />
+        android:hint="e.g. Asus"
+        android:inputType="text"
+        android:textSize="13sp" />
+
+    <!-- Brand -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Brand (Optional - Auto matches Manufacturer):"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/etBrand"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g. Asus"
+        android:inputType="text"
+        android:textSize="13sp" />
+
+    <!-- Model -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Model:"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/etModel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="MODEL (e.g. SHARK PRS-A0)" />
+        android:hint="e.g. ASUS_AI2205"
+        android:inputType="text"
+        android:textSize="13sp" />
 
+    <!-- Action Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="16dp"
         android:orientation="horizontal">
 
         <Button
@@ -47,13 +93,15 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Delete" />
+            android:text="Delete"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/btnSaveDevice"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Save" />
+            android:text="Save"
+            android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>
