@@ -15,18 +15,26 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Switch Manual Mode -->
+            <!-- 1. Spoof Bootloader -->
             <Switch
-                android:id="@+id/switchManual"
+                android:id="@+id/switchBootloader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Manual Mode" />
+                android:text="Spoof Bootloader" />
 
-            <!-- Status Auto & Last Update -->
+            <!-- 2. Spoof PIF -->
+            <Switch
+                android:id="@+id/switchPIF"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Spoof PIF" />
+
+            <!-- 3. Cek Update -->
             <TextView
                 android:id="@+id/tvAutoStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:text="Auto update: ON" />
 
             <TextView
@@ -35,31 +43,76 @@
                 android:layout_height="wrap_content"
                 android:text="Last update: -" />
 
-            <!-- Tombol Check Update Online -->
             <Button
                 android:id="@+id/btnUpdate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Check Update Online" />
 
-            <!-- Switch Toggles Basis -->
+            <!-- 4. Manual Mode (Import keybox/pif & Edit pif) -->
             <Switch
-                android:id="@+id/switchBootloader"
+                android:id="@+id/switchManual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Spoof Bootloader" />
+                android:layout_marginTop="8dp"
+                android:text="Manual Mode" />
 
-            <Switch
-                android:id="@+id/switchPIF"
+            <LinearLayout
+                android:id="@+id/panelManual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Spoof PIF" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
-            <!-- Section GameProps -->
+                <Button
+                    android:id="@+id/btnPickKeybox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pick Custom Keybox" />
+
+                <TextView
+                    android:id="@+id/tvKeyboxLastApply"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last apply: -" />
+
+                <Button
+                    android:id="@+id/btnPickPIF"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pick Custom PIF" />
+
+                <TextView
+                    android:id="@+id/tvPifLastApply"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last apply: -" />
+
+                <!-- Textbox Background Sedikit Abu-Abu -->
+                <EditText
+                    android:id="@+id/etPifEditor"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:background="#1E1E1E"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:padding="8dp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnApplyManual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Apply Manual PIF" />
+            </LinearLayout>
+
+            <!-- 5. GameProps -->
             <Switch
                 android:id="@+id/switchGameProps"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:text="Enable GameProps" />
 
             <LinearLayout
@@ -103,11 +156,12 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Section Thermals -->
+            <!-- 6. Thermals -->
             <Switch
                 android:id="@+id/switchThermals"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:text="Enable Per-App Thermals" />
 
             <LinearLayout
@@ -132,72 +186,56 @@
                     android:text="Reset" />
             </LinearLayout>
 
-            <!-- Panel Manual Mode -->
+            <!-- Garis Putih Pemisah -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="12dp"
+                android:background="#FFFFFF" />
+
+            <!-- == Log Header & Tombol Copy Kecil == -->
             <LinearLayout
-                android:id="@+id/panelManual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <Button
-                    android:id="@+id/btnPickKeybox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Pick Custom Keybox" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/tvKeyboxLastApply"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Last apply: -" />
+                    android:layout_weight="1"
+                    android:text="== Log =="
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
                 <Button
-                    android:id="@+id/btnPickPIF"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Pick Custom PIF" />
-
-                <TextView
-                    android:id="@+id/tvPifLastApply"
+                    android:id="@+id/btnCopyLog"
+                    style="?android:attr/buttonStyleSmall"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Last apply: -" />
-
-                <EditText
-                    android:id="@+id/etPifEditor"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp"
-                    android:gravity="top"
-                    android:inputType="textMultiLine" />
-
-                <Button
-                    android:id="@+id/btnApplyManual"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Apply Manual PIF" />
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingLeft="12dp"
+                    android:paddingTop="4dp"
+                    android:paddingRight="12dp"
+                    android:paddingBottom="4dp"
+                    android:text="Copy"
+                    android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Reset Persist Props -->
-            <Button
-                android:id="@+id/btnResetPersist"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Reset Persist Props" />
-
-            <!-- Log Viewer -->
+            <!-- Text Log Hijau Size Kecil & Background Sedikit Abu-Abu -->
             <EditText
                 android:id="@+id/tvLog"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
+                android:layout_marginTop="8dp"
+                android:background="#1E1E1E"
                 android:gravity="top"
-                android:text="[Log ready]" />
-
-            <Button
-                android:id="@+id/btnCopyLog"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Copy Log" />
+                android:padding="8dp"
+                android:text="[Log ready]"
+                android:textColor="#00FF00"
+                android:textSize="11sp" />
 
         </LinearLayout>
     </ScrollView>
