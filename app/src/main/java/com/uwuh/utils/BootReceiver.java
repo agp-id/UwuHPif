@@ -1,4 +1,4 @@
-package com.uwuh.pif;
+package com.uwuh.utils;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
