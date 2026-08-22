@@ -31,7 +31,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -396,21 +395,46 @@ public class MainActivity extends Activity {
         }
     }
 
+    private HashMap<String, String> getThermalNameMap() {
+        HashMap<String, String> map = new HashMap<>();
+        String[] thermalArray = getResources().getStringArray(R.array.thermal_options);
+        for (String entry : thermalArray) {
+            if (entry.contains(":")) {
+                String[] parts = entry.split(":", 2);
+                map.put(parts[0].trim(), parts[1].trim());
+            }
+        }
+        return map;
+    }
+
     private void showAppConfigDialog(boolean isGameProps) {
         String tag = isGameProps ? "GameProps" : "Thermals";
         String filePath = isGameProps ? GAMEPROPS_PATH : THERMALS_PATH;
         File file = new File(filePath);
 
+        String defaultOption = isGameProps ? "None" : "Default";
+
         List<String> options = new ArrayList<>();
-        options.add("None");
+        options.add(defaultOption);
+
+        HashMap<String, String> labelToKeyMap = new HashMap<>();
+        HashMap<String, String> thermalNameMap = getThermalNameMap();
 
         if (file.exists()) {
             try {
                 JSONObject root = new JSONObject(readFile(filePath));
                 Iterator<String> keys = root.keys();
                 while (keys.hasNext()) {
-                    String k = keys.next();
-                    if (!k.equals("DEFAULT")) options.add(k);
+                    String key = keys.next();
+                    if (isGameProps) {
+                        options.add(key);
+                        labelToKeyMap.put(key, key);
+                    } else {
+                        // Jika ada di strings.xml gunakan namanya, jika tidak gunakan fallback "Thermal Profile X"
+                        String label = thermalNameMap.containsKey(key) ? thermalNameMap.get(key) : "Thermal Profile " + key;
+                        options.add(label);
+                        labelToKeyMap.put(label, key);
+                    }
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }
@@ -428,7 +452,7 @@ public class MainActivity extends Activity {
         tvTitle.setText(isGameProps ? "GameProps App Config" : "Thermals App Config");
 
         String jsonString = file.exists() ? readFile(filePath) : "";
-        HashMap<String, String> currentMap = parseJsonToMap(jsonString);
+        HashMap<String, String> currentMap = parseJsonToMap(jsonString, isGameProps, thermalNameMap);
 
         PackageManager pm = getPackageManager();
         List<PackageInfo> installedPackages = pm.getInstalledPackages(0);
@@ -438,7 +462,7 @@ public class MainActivity extends Activity {
             boolean isSys = (pkg.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
             String appName = pkg.applicationInfo.loadLabel(pm).toString();
             String pkgName = pkg.packageName;
-            String config = currentMap.containsKey(pkgName) ? currentMap.get(pkgName) : "None";
+            String config = currentMap.containsKey(pkgName) ? currentMap.get(pkgName) : defaultOption;
 
             allApps.add(new AppModel(appName, pkgName, pkg.applicationInfo.loadIcon(pm), isSys, config));
         }
@@ -452,7 +476,7 @@ public class MainActivity extends Activity {
         btnCancel.setOnClickListener(v -> dialog.dismiss());
 
         btnSave.setOnClickListener(v -> {
-            boolean success = saveMapToJson(allApps, isGameProps, filePath);
+            boolean success = saveMapToJson(allApps, isGameProps, filePath, defaultOption, labelToKeyMap);
             if (success) {
                 addLog(tag + " config saved");
                 showToast("Configuration saved!");
@@ -482,8 +506,7 @@ public class MainActivity extends Activity {
                 JSONObject root = new JSONObject(readFile(GAMEPROPS_PATH));
                 Iterator<String> keys = root.keys();
                 while (keys.hasNext()) {
-                    String k = keys.next();
-                    if (!k.equals("DEFAULT")) deviceList.add(k);
+                    deviceList.add(keys.next());
                 }
             }
         } catch (Exception e) { e.printStackTrace(); }
@@ -607,7 +630,7 @@ public class MainActivity extends Activity {
         return filtered;
     }
 
-    private HashMap<String, String> parseJsonToMap(String jsonString) {
+    private HashMap<String, String> parseJsonToMap(String jsonString, boolean isGameProps, HashMap<String, String> thermalNameMap) {
         HashMap<String, String> map = new HashMap<>();
         if (jsonString == null || jsonString.isEmpty()) return map;
 
@@ -615,14 +638,17 @@ public class MainActivity extends Activity {
             JSONObject root = new JSONObject(jsonString);
             Iterator<String> keys = root.keys();
             while (keys.hasNext()) {
-                String configKey = keys.next();
-                if (configKey.equals("DEFAULT")) continue;
+                String key = keys.next();
+                JSONObject obj = root.optJSONObject(key);
+                if (obj == null) continue;
 
-                JSONObject obj = root.optJSONObject(configKey);
-                if (obj != null && obj.has("PKGNAMES")) {
-                    JSONArray pkgs = obj.getJSONArray("PKGNAMES");
+                // Membaca array PKGNAMES secara aman
+                JSONArray pkgs = obj.optJSONArray("PKGNAMES");
+                if (pkgs != null) {
+                    String displayLabel = isGameProps ? key : (thermalNameMap.containsKey(key) ? thermalNameMap.get(key) : "Thermal Profile " + key);
+
                     for (int i = 0; i < pkgs.length(); i++) {
-                        map.put(pkgs.getString(i), configKey);
+                        map.put(pkgs.getString(i), displayLabel);
                     }
                 }
             }
@@ -630,31 +656,30 @@ public class MainActivity extends Activity {
         return map;
     }
 
-    private boolean saveMapToJson(List<AppModel> allApps, boolean isGameProps, String path) {
+    private boolean saveMapToJson(List<AppModel> allApps, boolean isGameProps, String path, String defaultOption, HashMap<String, String> labelToKeyMap) {
         try {
             File file = new File(path);
             JSONObject root = file.exists() ? new JSONObject(readFile(path)) : new JSONObject();
 
-            if (!isGameProps && !root.has("DEFAULT")) {
-                root.put("DEFAULT", "0");
-            }
-
             HashMap<String, JSONArray> configGroups = new HashMap<>();
             for (AppModel app : allApps) {
-                String config = app.getSelectedConfig();
-                if (!config.equals("None")) {
-                    if (!configGroups.containsKey(config)) {
-                        configGroups.put(config, new JSONArray());
+                String selectedLabel = app.getSelectedConfig();
+                if (!selectedLabel.equals(defaultOption)) {
+                    String actualKey = labelToKeyMap.get(selectedLabel);
+                    if (actualKey != null) {
+                        if (!configGroups.containsKey(actualKey)) {
+                            configGroups.put(actualKey, new JSONArray());
+                        }
+                        configGroups.get(actualKey).put(app.getPackageName());
                     }
-                    configGroups.get(config).put(app.getPackageName());
                 }
             }
 
             Iterator<String> keys = root.keys();
             while (keys.hasNext()) {
                 String k = keys.next();
-                if (k.equals("DEFAULT")) continue;
                 JSONObject obj = root.getJSONObject(k);
+                // Hanya memperbarui PKGNAMES, mempertahankan semua variabel bawaan/custom di JSON
                 obj.put("PKGNAMES", configGroups.containsKey(k) ? configGroups.get(k) : new JSONArray());
             }
 
