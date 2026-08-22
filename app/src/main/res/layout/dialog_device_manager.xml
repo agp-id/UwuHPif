@@ -12,6 +12,14 @@
         android:textSize="18sp"
         android:textStyle="bold" />
 
+    <Switch
+        android:id="@+id/switchAutoUpdateDevices"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Auto Update Devices List"
+        android:textSize="15sp" />
+
     <ListView
         android:id="@+id/lvDevices"
         android:layout_width="match_parent"
@@ -29,13 +37,15 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Add Device" />
+            android:text="Add Device"
+            android:textSize="14sp" />
 
         <Button
             android:id="@+id/btnCloseDeviceDialog"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Close" />
+            android:text="Close"
+            android:textSize="14sp" />
     </LinearLayout>
 </LinearLayout>
