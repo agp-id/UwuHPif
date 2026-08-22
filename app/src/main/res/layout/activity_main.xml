@@ -5,10 +5,12 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- ScrollView Utama: Indikator scroll dihilangkan (scrollbars="none") -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -20,14 +22,17 @@
                 android:id="@+id/switchBootloader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Spoof Bootloader" />
+                android:text="Spoof Bootloader"
+                android:textSize="16sp" />
 
             <!-- 2. Spoof PIF -->
             <Switch
                 android:id="@+id/switchPIF"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Spoof PIF" />
+                android:layout_marginTop="4dp"
+                android:text="Spoof PIF"
+                android:textSize="16sp" />
 
             <!-- 3. Cek Update -->
             <TextView
@@ -35,27 +40,32 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Auto update: ON" />
+                android:text="Auto update: ON"
+                android:textSize="11sp" />
 
             <TextView
                 android:id="@+id/tvLastUpdate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Last update: -" />
+                android:text="Last update: -"
+                android:textSize="11sp" />
 
             <Button
                 android:id="@+id/btnUpdate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Check Update Online" />
+                android:layout_marginTop="2dp"
+                android:text="Check Update Online"
+                android:textSize="14sp" />
 
-            <!-- 4. Manual Mode (Import keybox/pif & Edit pif) -->
+            <!-- 4. Manual Mode -->
             <Switch
                 android:id="@+id/switchManual"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Manual Mode" />
+                android:text="Manual Mode"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:id="@+id/panelManual"
@@ -68,35 +78,43 @@
                     android:id="@+id/btnPickKeybox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pick Custom Keybox" />
+                    android:text="Pick Custom Keybox"
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/tvKeyboxLastApply"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Last apply: -" />
+                    android:text="Last apply: -"
+                    android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/btnPickPIF"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pick Custom PIF" />
+                    android:layout_marginTop="4dp"
+                    android:text="Pick Custom PIF"
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/tvPifLastApply"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Last apply: -" />
+                    android:text="Last apply: -"
+                    android:textSize="11sp" />
 
-                <!-- Textbox Background Sedikit Abu-Abu -->
+                <!-- PIF Editor: Menampilkan scrollbar jika teks melebihi tinggi box -->
                 <EditText
                     android:id="@+id/etPifEditor"
                     android:layout_width="match_parent"
                     android:layout_height="150dp"
+                    android:layout_marginTop="4dp"
                     android:background="#1E1E1E"
+                    android:fadeScrollbars="true"
                     android:gravity="top"
                     android:inputType="textMultiLine"
                     android:padding="8dp"
+                    android:scrollbars="vertical"
                     android:textColor="#FFFFFF"
                     android:textSize="12sp" />
 
@@ -104,7 +122,9 @@
                     android:id="@+id/btnApplyManual"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Apply Manual PIF" />
+                    android:layout_marginTop="4dp"
+                    android:text="Apply Manual PIF"
+                    android:textSize="14sp" />
             </LinearLayout>
 
             <!-- 5. GameProps -->
@@ -113,47 +133,40 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Enable GameProps" />
+                android:text="Enable GameProps"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:id="@+id/panelGamePropsBtn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
                 android:visibility="gone">
 
-                <Switch
-                    android:id="@+id/switchAutoUpdateDevices"
-                    android:layout_width="match_parent"
+                <Button
+                    android:id="@+id/btnGameProps"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Auto Update Devices List" />
+                    android:layout_weight="1"
+                    android:text="Edit App Config"
+                    android:textSize="13sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <Button
+                    android:id="@+id/btnDevices"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:layout_weight="1"
+                    android:text="Devices"
+                    android:textSize="13sp" />
 
-                    <Button
-                        android:id="@+id/btnGameProps"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Edit App Config" />
-
-                    <Button
-                        android:id="@+id/btnDevices"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Devices" />
-
-                    <Button
-                        android:id="@+id/btnResetGameProps"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Reset" />
-                </LinearLayout>
+                <Button
+                    android:id="@+id/btnResetGameProps"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Reset"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <!-- 6. Thermals -->
@@ -162,12 +175,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Enable Per-App Thermals" />
+                android:text="Enable Per-App Thermals"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:id="@+id/panelThermalsBtn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
                 android:orientation="horizontal"
                 android:visibility="gone">
 
@@ -176,14 +191,16 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Edit Thermals" />
+                    android:text="Edit Thermals"
+                    android:textSize="13sp" />
 
                 <Button
                     android:id="@+id/btnResetThermals"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Reset" />
+                    android:text="Reset"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <!-- Garis Putih Pemisah -->
@@ -206,7 +223,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="== Log =="
-                    android:textSize="14sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <Button
@@ -216,23 +233,25 @@
                     android:layout_height="wrap_content"
                     android:minWidth="0dp"
                     android:minHeight="0dp"
-                    android:paddingLeft="12dp"
-                    android:paddingTop="4dp"
-                    android:paddingRight="12dp"
-                    android:paddingBottom="4dp"
+                    android:paddingLeft="14dp"
+                    android:paddingTop="8dp"
+                    android:paddingRight="14dp"
+                    android:paddingBottom="8dp"
                     android:text="Copy"
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Text Log Hijau Size Kecil & Background Sedikit Abu-Abu -->
+            <!-- Log Viewer: Menampilkan scrollbar jika teks log melebihi tinggi box -->
             <EditText
                 android:id="@+id/tvLog"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
                 android:layout_marginTop="8dp"
                 android:background="#1E1E1E"
+                android:fadeScrollbars="true"
                 android:gravity="top"
                 android:padding="8dp"
+                android:scrollbars="vertical"
                 android:text="[Log ready]"
                 android:textColor="#00FF00"
                 android:textSize="11sp" />
