@@ -111,7 +111,7 @@ public class GamePropsThermalController {
         btnSave.setOnClickListener(v -> {
             boolean success = saveMapToJson(allApps, filePath, defaultOption, labelToKeyMap);
             if (success) {
-                UwuhManager.syncToFramework(moduleKey, filePath);
+                UwuhManager.syncToFramework(context, moduleKey, filePath);
                 callback.log((isGameProps ? "GameProps" : "Thermals") + " config saved & chunked");
                 Toast.makeText(context, "Saved & Synced!", Toast.LENGTH_SHORT).show();
             } else {
@@ -215,7 +215,7 @@ public class GamePropsThermalController {
                 if (isEdit && !devName.equals(name)) root.remove(devName);
                 root.put(name, devObj);
 
-                if (UwuhManager.writeAndSync(UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4))) {
+                if (UwuhManager.writeAndSync(context, UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4))) {
                     callback.log("Device " + name + " saved & chunked");
                 }
             } catch (Exception e) { e.printStackTrace(); }
@@ -228,7 +228,7 @@ public class GamePropsThermalController {
                 JSONObject root = new JSONObject(UwuhManager.readFile(UwuhManager.GAMEPROPS_PATH));
                 if (root.has(devName)) {
                     root.remove(devName);
-                    UwuhManager.writeAndSync(UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4));
+                    UwuhManager.writeAndSync(context, UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4));
                     callback.log("Device " + devName + " deleted");
                 }
             } catch (Exception e) { e.printStackTrace(); }
@@ -241,7 +241,7 @@ public class GamePropsThermalController {
 
     public static void resetGameProps(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_gameprops);
-        if (!data.isEmpty() && UwuhManager.writeAndSync(UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, data)) {
+        if (!data.isEmpty() && UwuhManager.writeAndSync(context, UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, data)) {
             callback.log("GameProps reset to default raw & chunked");
             Toast.makeText(context, "GameProps Reset!", Toast.LENGTH_SHORT).show();
         }
@@ -249,7 +249,7 @@ public class GamePropsThermalController {
 
     public static void resetThermals(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_thermals);
-        if (!data.isEmpty() && UwuhManager.writeAndSync(UwuhManager.MODULE_THERMALS, UwuhManager.THERMALS_PATH, data)) {
+        if (!data.isEmpty() && UwuhManager.writeAndSync(context, UwuhManager.MODULE_THERMALS, UwuhManager.THERMALS_PATH, data)) {
             callback.log("Thermals reset to default raw & chunked");
             Toast.makeText(context, "Thermals Reset!", Toast.LENGTH_SHORT).show();
         }
@@ -300,7 +300,6 @@ public class GamePropsThermalController {
             File file = new File(path);
             JSONObject root = file.exists() ? new JSONObject(UwuhManager.readFile(path)) : new JSONObject();
 
-            // 1. Kumpulkan daftar semua package name dari app yang terinstal saat ini
             HashSet<String> installedPkgSet = new HashSet<>();
             Map<String, String> currentSelectionMap = new HashMap<>();
 
@@ -309,7 +308,6 @@ public class GamePropsThermalController {
                 currentSelectionMap.put(app.getPackageName(), app.getSelectedConfig());
             }
 
-            // 2. Baca ulang data lama untuk mempertahankan app uninstalled & membersihkan duplikasi
             Map<String, HashSet<String>> finalPkgGroups = new HashMap<>();
             Iterator<String> keys = root.keys();
             while (keys.hasNext()) {
@@ -322,7 +320,6 @@ public class GamePropsThermalController {
                     if (oldPkgs != null) {
                         for (int i = 0; i < oldPkgs.length(); i++) {
                             String oldPkg = oldPkgs.getString(i);
-                            // Jika app TIDAK terinstal saat ini, tetap pertahankan di key lamanya
                             if (!installedPkgSet.contains(oldPkg)) {
                                 finalPkgGroups.get(key).add(oldPkg);
                             }
@@ -331,7 +328,6 @@ public class GamePropsThermalController {
                 }
             }
 
-            // 3. Masukkan pilihan app terinstal saat ini ke key yang sesuai
             for (AppModel app : allApps) {
                 String selectedLabel = app.getSelectedConfig();
                 if (!selectedLabel.equals(defaultOption)) {
@@ -340,13 +336,11 @@ public class GamePropsThermalController {
                         if (!finalPkgGroups.containsKey(actualKey)) {
                             finalPkgGroups.put(actualKey, new HashSet<>());
                         }
-                        // Menambahkan ke Set menjamin pkg name hanya ada di 1 key ini
                         finalPkgGroups.get(actualKey).add(app.getPackageName());
                     }
                 }
             }
 
-            // 4. Tulis kembali ke JSONObject root
             for (Map.Entry<String, HashSet<String>> entry : finalPkgGroups.entrySet()) {
                 String key = entry.getKey();
                 JSONArray newArray = new JSONArray();
