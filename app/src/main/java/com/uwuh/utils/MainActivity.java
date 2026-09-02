@@ -14,9 +14,6 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
 import java.io.File;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -24,7 +21,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private static final int REQ_PICK_KEYBOX = 1001;
     private static final int REQ_PICK_PIF = 1002;
@@ -69,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         switchUseCustom.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, String.valueOf(isChecked));
             updateUiState();
-            
+
             // Sinkronkan ulang pilihan ke framework secara async
             runAsyncWithLock(() -> {
                 UwuhManager.syncAllToFramework(isChecked);
@@ -84,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
         btnApplyManualPif.setOnClickListener(v -> {
             String content = etPifContent.getText().toString().trim();
             if (content.isEmpty()) {
-                Toast.makeText(this, "Konten PIF tidak boleh kosong!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Konten PIF tidak boleh kosong!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -93,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                 String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                 UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, content);
             }, () -> {
-                Toast.makeText(this, "PIF berhasil diterapkan!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "PIF berhasil diterapkan!", Toast.LENGTH_SHORT).show();
                 loadPifContentToEditText();
             });
         });
@@ -101,11 +98,10 @@ public class MainActivity extends AppCompatActivity {
         // Tombol Cek Update
         btnCheckUpdate.setOnClickListener(v -> {
             runAsyncWithLock(() -> {
-                // Simulasi / Proses Sync All Data
                 boolean useCustom = switchUseCustom.isChecked();
                 UwuhManager.syncAllToFramework(useCustom);
             }, () -> {
-                Toast.makeText(this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
             });
         });
@@ -152,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Mengisi EditText PIF langsung dari file tanpa menampilkan label status apply
+     * Mengisi EditText PIF langsung dari file
      */
     private void loadPifContentToEditText() {
         boolean useCustom = switchUseCustom.isChecked();
@@ -172,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
@@ -202,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }, () -> {
-                Toast.makeText(this, "File berhasil diimpor dan disinkronkan!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "File berhasil diimpor dan disinkronkan!", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
                 loadPifContentToEditText();
             });
@@ -210,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Mengunci seluruh UI selama proses async berjalan agar aman dari spam click
+     * Mengunci seluruh UI selama proses async berjalan
      */
     private void setUiEnabled(boolean enabled) {
         switchUseCustom.setEnabled(enabled);
@@ -222,9 +218,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Helper Runnable Async dengan proteksi penguncian UI otomatis
+     * Helper Runnable Async dengan proteksi penguncian UI
      */
-    private void runAsyncWithLock(Runnable backgroundTask, @Nullable Runnable onComplete) {
+    private void runAsyncWithLock(Runnable backgroundTask, Runnable onComplete) {
         setUiEnabled(false);
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
