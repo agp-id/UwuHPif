@@ -35,13 +35,6 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
 
-    private static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
-    private static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
-    private static final String PROP_FINSKY = "persist.sys.oemports10t.utils.finsky";
-    private static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
-    private static final String PROP_THERMALS = "persist.sys.oemports10t.utils.perapp_thermals";
-    private static final String PROP_GAMEPROPS = "persist.sys.oemports10t.utils.gameprops";
-
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
 
@@ -105,16 +98,16 @@ public class MainActivity extends Activity {
     }
 
     private void loadSystemPropertiesState() {
-        boolean pifState = UwuhManager.getPropBoolean(PROP_PIF, true);
-        boolean finskyState = UwuhManager.getPropBoolean(PROP_FINSKY, true);
+        boolean pifState = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
+        boolean finskyState = UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, true);
 
-        switchBootloader.setChecked(UwuhManager.getPropBoolean(PROP_BOOTLOADER, true));
+        switchBootloader.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true));
         switchPIF.setChecked(pifState);
         switchFinsky.setChecked(finskyState);
         switchFinsky.setVisibility(pifState ? View.VISIBLE : View.GONE);
 
-        switchGameProps.setChecked(UwuhManager.getPropBoolean(PROP_GAMEPROPS, false));
-        switchThermals.setChecked(UwuhManager.getPropBoolean(PROP_THERMALS, false));
+        switchGameProps.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false));
+        switchThermals.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false));
 
         panelGamePropsBtn.setVisibility(switchGameProps.isChecked() ? View.VISIBLE : View.GONE);
         panelThermalsBtn.setVisibility(switchThermals.isChecked() ? View.VISIBLE : View.GONE);
@@ -128,7 +121,7 @@ public class MainActivity extends Activity {
     private void setupListeners() {
         switchManual.setOnCheckedChangeListener((v, checked) -> {
             sp.edit().putBoolean("manual", checked).apply();
-            UwuhManager.setProp(PROP_USE_CUSTOM, checked ? "true" : "false");
+            UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, checked ? "true" : "false");
             updateUIState(checked);
             addLog("Mode: " + (checked ? "Manual" : "Auto"));
 
@@ -136,29 +129,29 @@ public class MainActivity extends Activity {
         });
 
         switchBootloader.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(PROP_BOOTLOADER, checked ? "true" : "false");
+            UwuhManager.setProp(UwuhManager.PROP_BOOTLOADER, checked ? "true" : "false");
             addLog("Bootloader spoof: " + (checked ? "ON" : "OFF"));
         });
 
         switchPIF.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(PROP_PIF, checked ? "true" : "false");
+            UwuhManager.setProp(UwuhManager.PROP_PIF, checked ? "true" : "false");
             switchFinsky.setVisibility(checked ? View.VISIBLE : View.GONE);
             addLog("PIF spoof: " + (checked ? "ON" : "OFF"));
         });
 
         switchFinsky.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(PROP_FINSKY, checked ? "true" : "false");
+            UwuhManager.setProp(UwuhManager.PROP_FINSKY, checked ? "true" : "false");
             addLog("Play Store Fingerprint spoof: " + (checked ? "ON" : "OFF"));
         });
 
         switchGameProps.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(PROP_GAMEPROPS, checked ? "true" : "false");
+            UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, checked ? "true" : "false");
             panelGamePropsBtn.setVisibility(checked ? View.VISIBLE : View.GONE);
             addLog("GameProps " + (checked ? "enabled" : "disabled"));
         });
 
         switchThermals.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(PROP_THERMALS, checked ? "true" : "false");
+            UwuhManager.setProp(UwuhManager.PROP_THERMALS, checked ? "true" : "false");
             panelThermalsBtn.setVisibility(checked ? View.VISIBLE : View.GONE);
             addLog("Thermals " + (checked ? "enabled" : "disabled"));
         });
