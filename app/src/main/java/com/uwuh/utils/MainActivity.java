@@ -1,6 +1,8 @@
 package com.uwuh.utils;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -30,6 +32,7 @@ public class MainActivity extends Activity {
     private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals;
     private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
     private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnUpdate, btnCopyLog;
+    private Button btnGameProps, btnDevices, btnResetGameProps, btnThermals, btnResetThermals;
     private TextView tvKeyboxLastApply, tvPifLastApply, tvAutoStatus, tvLastUpdate, tvLog;
     private EditText etPifEditor;
 
@@ -62,6 +65,13 @@ public class MainActivity extends Activity {
         btnApplyManual = findViewById(R.id.btnApplyManual);
         btnUpdate = findViewById(R.id.btnUpdate);
         btnCopyLog = findViewById(R.id.btnCopyLog);
+
+        // Tombol GameProps & Thermals
+        btnGameProps = findViewById(R.id.btnGameProps);
+        btnDevices = findViewById(R.id.btnDevices);
+        btnResetGameProps = findViewById(R.id.btnResetGameProps);
+        btnThermals = findViewById(R.id.btnThermals);
+        btnResetThermals = findViewById(R.id.btnResetThermals);
 
         tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
         tvPifLastApply = findViewById(R.id.tvPifLastApply);
@@ -115,7 +125,7 @@ public class MainActivity extends Activity {
         btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
         btnPickPIF.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
 
-        // Tombol Apply Manual PIF Editor Content
+        // Tombol Apply Manual PIF
         btnApplyManual.setOnClickListener(v -> {
             String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
@@ -143,13 +153,100 @@ public class MainActivity extends Activity {
                 refreshFileMetadataUI();
             });
         });
+
+        // === LISTENER GAMEPROPS & THERMALS ===
+
+        // Popup Edit App Config GameProps
+        btnGameProps.setOnClickListener(v -> showJsonEditorDialog("Edit GameProps Config", UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS));
+
+        // Popup Pilihan Devices Preset GameProps
+        btnDevices.setOnClickListener(v -> showDevicesPresetDialog());
+
+        // Reset GameProps ke Default
+        btnResetGameProps.setOnClickListener(v -> showResetConfirmDialog("GameProps", UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS));
+
+        // Popup Edit Thermals
+        btnThermals.setOnClickListener(v -> showJsonEditorDialog("Edit Thermals Config", UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS));
+
+        // Reset Thermals ke Default
+        btnResetThermals.setOnClickListener(v -> showResetConfirmDialog("Thermals", UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS));
+
+        // Copy Log Button
+        btnCopyLog.setOnClickListener(v -> {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newPlainText("UwuhLog", tvLog.getText().toString());
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(MainActivity.this, "Log disalin ke clipboard!", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    /**
+     * Membuka Popup Editor untuk Mengubah Berkas JSON (GameProps / Thermals)
+     */
+    private void showJsonEditorDialog(String title, String filePath, String moduleKey) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(title);
+
+        final EditText input = new EditText(this);
+        input.setText(UwuhManager.readFile(filePath));
+        input.setMinLines(8);
+        input.setGravity(android.view.Gravity.TOP);
+        builder.setView(input);
+
+        builder.setPositiveButton("Simpan", (dialog, which) -> {
+            String newContent = input.getText().toString().trim();
+            runAsyncWithLock(() -> {
+                UwuhManager.writeAndSync(moduleKey, filePath, newContent);
+            }, () -> {
+                Toast.makeText(MainActivity.this, title + " berhasil disimpan!", Toast.LENGTH_SHORT).show();
+            });
+        });
+
+        builder.setNegativeButton("Batal", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
+    /**
+     * Membuka Popup Pemilihan Preset Device GameProps
+     */
+    private void showDevicesPresetDialog() {
+        final String[] devices = {"ROG Phone 8 Pro", "Xiaomi 14 Pro", "Galaxy S24 Ultra", "iPad Pro M4"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Pilih Preset Device GameProps");
+        builder.setItems(devices, (dialog, which) -> {
+            String selectedDevice = devices[which];
+            Toast.makeText(MainActivity.this, "Device dipilih: " + selectedDevice, Toast.LENGTH_SHORT).show();
+            // Nanti dapat disesuaikan logika penulisan preset JSON berdasarkan device terpilih
+        });
+        builder.show();
+    }
+
+    /**
+     * Popup Konfirmasi Reset Config
+     */
+    private void showResetConfirmDialog(String name, String filePath, String moduleKey) {
+        new AlertDialog.Builder(this)
+                .setTitle("Reset " + name)
+                .setMessage("Apakah Anda yakin ingin menghapus konfigurasi " + name + "?")
+                .setPositiveButton("Ya", (dialog, which) -> {
+                    runAsyncWithLock(() -> {
+                        File f = new File(filePath);
+                        if (f.exists()) f.delete();
+                        UwuhManager.syncToFramework(moduleKey, filePath);
+                    }, () -> {
+                        Toast.makeText(MainActivity.this, name + " telah di-reset!", Toast.LENGTH_SHORT).show();
+                    });
+                })
+                .setNegativeButton("Batal", null)
+                .show();
     }
 
     /**
      * Membaca seluruh SystemProperties dan memperbarui status visual UI
      */
     private void updateUiState() {
-        // Read all property values from SystemProperties
         boolean useBootloader = UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true);
         boolean usePif = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
         boolean useFinsky = UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, false);
@@ -157,7 +254,6 @@ public class MainActivity extends Activity {
         boolean useGameProps = UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false);
         boolean useThermals = UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false);
 
-        // Set Switch states based on properties
         switchBootloader.setChecked(useBootloader);
         switchPIF.setChecked(usePif);
         switchFinsky.setChecked(useFinsky);
@@ -165,19 +261,16 @@ public class MainActivity extends Activity {
         switchGameProps.setChecked(useGameProps);
         switchThermals.setChecked(useThermals);
 
-        // Adjust visibility
         switchFinsky.setVisibility(usePif ? View.VISIBLE : View.GONE);
         panelGamePropsBtn.setVisibility(useGameProps ? View.VISIBLE : View.GONE);
         panelThermalsBtn.setVisibility(useThermals ? View.VISIBLE : View.GONE);
 
         if (useCustom) {
-            // Sembunyikan bagian update & Last update, munculkan panel Manual
             panelManual.setVisibility(View.VISIBLE);
             tvAutoStatus.setVisibility(View.GONE);
             tvLastUpdate.setVisibility(View.GONE);
             btnUpdate.setVisibility(View.GONE);
         } else {
-            // Tampilkan bagian update, sembunyikan panel Manual
             panelManual.setVisibility(View.GONE);
             tvAutoStatus.setVisibility(View.VISIBLE);
             tvLastUpdate.setVisibility(View.VISIBLE);
@@ -206,7 +299,6 @@ public class MainActivity extends Activity {
             tvKeyboxLastApply.setText("Last apply: -");
         }
 
-        // tvPifLastApply disembunyikan karena nilainya sudah terlihat langsung di EditText PIF
         tvPifLastApply.setVisibility(View.GONE);
     }
 
@@ -284,6 +376,12 @@ public class MainActivity extends Activity {
         btnApplyManual.setEnabled(enabled);
         btnUpdate.setEnabled(enabled);
         btnCopyLog.setEnabled(enabled);
+
+        btnGameProps.setEnabled(enabled);
+        btnDevices.setEnabled(enabled);
+        btnResetGameProps.setEnabled(enabled);
+        btnThermals.setEnabled(enabled);
+        btnResetThermals.setEnabled(enabled);
 
         etPifEditor.setEnabled(enabled);
     }
