@@ -58,10 +58,12 @@ public class MainActivity extends Activity {
 
         initViews();
         
-        // Pastikan file fallback dari raw sudah tercopy jika folder kosong
+        // Ekstrak fallback dari raw resource jika file target belum ada
         initDefaultFilesFromRaw();
 
+        // Cek System Properties OS & inisialisasi jika belum pernah di-set
         loadSystemPropertiesState();
+        
         setupListeners();
 
         boolean isManual = sp.getBoolean("manual", false);
@@ -110,23 +112,44 @@ public class MainActivity extends Activity {
     }
 
     private void loadSystemPropertiesState() {
-        boolean pifState = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
+        // Cek System Properties OS, jika belum ada nilainya, otomatis diset ke default value
+        boolean bootloaderState = getOrInitProp(UwuhManager.PROP_BOOTLOADER, true);
+        boolean pifState        = getOrInitProp(UwuhManager.PROP_PIF, true);
+        boolean finskyState     = getOrInitProp(UwuhManager.PROP_FINSKY, true);
+        boolean useCustomState  = getOrInitProp(UwuhManager.PROP_USE_CUSTOM, false);
+        boolean gamePropsState  = getOrInitProp(UwuhManager.PROP_GAMEPROPS, false);
+        boolean thermalsState   = getOrInitProp(UwuhManager.PROP_THERMALS, false);
 
-        switchBootloader.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true));
+        // Terapkan nilai ke Switch UI
+        switchManual.setChecked(useCustomState);
+        switchBootloader.setChecked(bootloaderState);
         switchPIF.setChecked(pifState);
-        switchFinsky.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, true));
+        switchFinsky.setChecked(finskyState);
         switchFinsky.setVisibility(pifState ? View.VISIBLE : View.GONE);
 
-        switchGameProps.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false));
-        switchThermals.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false));
+        switchGameProps.setChecked(gamePropsState);
+        switchThermals.setChecked(thermalsState);
 
-        panelGamePropsBtn.setVisibility(switchGameProps.isChecked() ? View.VISIBLE : View.GONE);
-        panelThermalsBtn.setVisibility(switchThermals.isChecked() ? View.VISIBLE : View.GONE);
+        panelGamePropsBtn.setVisibility(gamePropsState ? View.VISIBLE : View.GONE);
+        panelThermalsBtn.setVisibility(thermalsState ? View.VISIBLE : View.GONE);
 
         tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
         tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
 
         loadCustomPIF();
+    }
+
+    /**
+     * Helper untuk cek System Properties. Jika belum diset di OS (""), 
+     * akan diset otomatis ke default value.
+     */
+    private boolean getOrInitProp(String key, boolean defaultValue) {
+        String currentVal = UwuhManager.getProp(key, "");
+        if (currentVal.isEmpty()) {
+            UwuhManager.setProp(key, defaultValue ? "true" : "false");
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(currentVal);
     }
 
     private void setupListeners() {
@@ -176,8 +199,8 @@ public class MainActivity extends Activity {
         findViewById(R.id.btnResetGameProps).setOnClickListener(v -> GamePropsThermalController.resetGameProps(this, this::addLog));
         findViewById(R.id.btnResetThermals).setOnClickListener(v -> GamePropsThermalController.resetThermals(this, this::addLog));
 
-        // File Picker untuk .xml (Keybox) dan .prop (PIF)
-        findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile("text/xml", 101));
+        // Picker file untuk Keybox (.xml) dan PIF (.prop)
+        findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile("*/*", 101));
         findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile("*/*", 102));
         btnApplyManual.setOnClickListener(v -> applyManualPIF());
     }
