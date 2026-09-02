@@ -12,7 +12,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.Selection;
 import android.text.method.ScrollingMovementMethod;
 import android.view.MotionEvent;
 import android.view.View;
@@ -57,6 +56,10 @@ public class MainActivity extends Activity {
         sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
 
         initViews();
+        
+        // Pastikan file fallback dari raw sudah tercopy jika folder kosong
+        initDefaultFilesFromRaw();
+
         loadSystemPropertiesState();
         setupListeners();
 
@@ -66,6 +69,15 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             UwuhManager.syncAllToFramework(isManual);
             if (!isManual) checkUpdateOnline(false);
+        }).start();
+    }
+
+    private void initDefaultFilesFromRaw() {
+        new Thread(() -> {
+            UwuhManager.copyRawIfNotExist(this, R.raw.default_keybox, UwuhManager.KB_PATH, UwuhManager.MODULE_KEYBOX);
+            UwuhManager.copyRawIfNotExist(this, R.raw.default_pif, UwuhManager.PIF_PATH, UwuhManager.MODULE_PIF);
+            UwuhManager.copyRawIfNotExist(this, R.raw.default_gameprops, UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS);
+            UwuhManager.copyRawIfNotExist(this, R.raw.default_thermals, UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS);
         }).start();
     }
 
@@ -93,17 +105,15 @@ public class MainActivity extends Activity {
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
         tvLog.setMovementMethod(new ScrollingMovementMethod());
-
         enableInnerScroll(etPifEditor);
     }
 
     private void loadSystemPropertiesState() {
         boolean pifState = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
-        boolean finskyState = UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, true);
 
         switchBootloader.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true));
         switchPIF.setChecked(pifState);
-        switchFinsky.setChecked(finskyState);
+        switchFinsky.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, true));
         switchFinsky.setVisibility(pifState ? View.VISIBLE : View.GONE);
 
         switchGameProps.setChecked(UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false));
@@ -165,8 +175,9 @@ public class MainActivity extends Activity {
         findViewById(R.id.btnResetGameProps).setOnClickListener(v -> GamePropsThermalController.resetGameProps(this, this::addLog));
         findViewById(R.id.btnResetThermals).setOnClickListener(v -> GamePropsThermalController.resetThermals(this, this::addLog));
 
-        findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile(101));
-        findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile(102));
+        // File Picker untuk .xml (Keybox) dan .prop (PIF)
+        findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile("text/xml", 101));
+        findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile("*/*", 102));
         btnApplyManual.setOnClickListener(v -> applyManualPIF());
     }
 
@@ -174,15 +185,18 @@ public class MainActivity extends Activity {
         String content = etPifEditor.getText().toString().trim();
         if (content.isEmpty() || content.startsWith("# No custom")) return;
 
-        if (UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.CUST_PIF_PATH, content)) {
-            String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-            sp.edit().putString("pif_last_apply", time).apply();
-            tvPifLastApply.setText("Last apply: " + time);
-
-            addLog("Custom PIF applied & chunked!");
-            Toast.makeText(this, "Custom PIF Applied!", Toast.LENGTH_SHORT).show();
-            killGMSAndVending();
-        }
+        new Thread(() -> {
+            if (UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.CUST_PIF_PATH, content)) {
+                String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+                sp.edit().putString("pif_last_apply", time).apply();
+                runOnUiThread(() -> {
+                    tvPifLastApply.setText("Last apply: " + time);
+                    Toast.makeText(this, "Custom PIF Applied!", Toast.LENGTH_SHORT).show();
+                });
+                addLog("Custom PIF applied & chunked!");
+                killGMSAndVending();
+            }
+        }).start();
     }
 
     private void checkUpdateOnline(boolean showToast) {
@@ -241,37 +255,50 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void pickFile(int requestCode) {
+    private void pickFile(String mimeType, int requestCode) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*");
-        startActivityForResult(intent, requestCode);
+        intent.setType(mimeType);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(Intent.createChooser(intent, "Select File"), requestCode);
     }
 
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (res == Activity.RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
             new Thread(() -> {
-                String content = readUri(data.getData());
-                if (content.isEmpty()) return;
+                String content = readUri(uri);
+                if (content.isEmpty()) {
+                    addLog("Failed to read selected file or file is empty");
+                    return;
+                }
 
-                if (req == 101) {
+                if (req == 101) { // Selection Keybox (.xml)
                     if (UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.CUST_KB_PATH, content)) {
                         String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
                         sp.edit().putString("keybox_last_apply", time).apply();
-                        runOnUiThread(() -> tvKeyboxLastApply.setText("Last apply: " + time));
-                        addLog("Custom Keybox saved & chunked");
+                        runOnUiThread(() -> {
+                            tvKeyboxLastApply.setText("Last apply: " + time);
+                            Toast.makeText(this, "Custom Keybox Saved!", Toast.LENGTH_SHORT).show();
+                        });
+                        addLog("Custom Keybox saved to cust_keybox.xml & chunked");
+                    } else {
+                        addLog("Failed to write cust_keybox.xml");
                     }
-                } else if (req == 102) {
+                } else if (req == 102) { // Selection PIF (.prop)
                     if (UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.CUST_PIF_PATH, content)) {
                         String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
                         sp.edit().putString("pif_last_apply", time).apply();
                         runOnUiThread(() -> {
                             tvPifLastApply.setText("Last apply: " + time);
                             etPifEditor.setText(content);
+                            Toast.makeText(this, "Custom PIF Saved!", Toast.LENGTH_SHORT).show();
                         });
-                        addLog("Custom PIF saved & chunked");
+                        addLog("Custom PIF saved to cust_pif.prop & chunked");
                         killGMSAndVending();
+                    } else {
+                        addLog("Failed to write cust_pif.prop");
                     }
                 }
             }).start();
@@ -333,11 +360,15 @@ public class MainActivity extends Activity {
 
     private String readUri(Uri uri) {
         try {
-            BufferedReader r = new BufferedReader(new InputStreamReader(getContentResolver().openInputStream(uri)));
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            if (inputStream == null) return "";
+            BufferedReader r = new BufferedReader(new InputStreamReader(inputStream));
             StringBuilder sb = new StringBuilder(); String line;
             while ((line = r.readLine()) != null) sb.append(line).append("\n");
             r.close();
             return sb.toString().trim();
-        } catch (Exception e) { return ""; }
+        } catch (Exception e) {
+            return "";
+        }
     }
 }
