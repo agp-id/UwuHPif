@@ -37,12 +37,11 @@ public class UwuhManager {
     public static final String PROP_GAMEPROPS  = "persist.sys.uwuh.utils.gameprops";
     public static final String PROP_THERMALS   = "persist.sys.uwuh.utils.perapp_thermals";
 
+    // TARGET PINTU MASUK KE FRAMEWORK
+    private static final String FRAMEWORK_ENTRY_CLASS = "com.android.internal.util.danda.OemPortsUtils";
+
     private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
 
-    /**
-     * Mendapatkan Framework/System ClassLoader murni dari android.os.SystemProperties.
-     * Ini menyelesaikan ClassNotFoundException saat memanggil SpoofUtils di framework.jar
-     */
     private static ClassLoader getFrameworkClassLoader() {
         try {
             ClassLoader cl = Class.forName("android.os.SystemProperties").getClassLoader();
@@ -105,7 +104,7 @@ public class UwuhManager {
             boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
             if (success) {
                 sLastModifiedMap.put(filePath, currentLastModified);
-                Log.d(TAG, "Chunk synced to RAM via Reflection for: " + moduleKey);
+                Log.d(TAG, "Chunk synced via OemPortsUtils for: " + moduleKey);
             }
         }
     }
@@ -138,26 +137,26 @@ public class UwuhManager {
 
     private static boolean invokeFrameworkWriteConfig(String moduleKey, String rawContent) {
         try {
-            Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
+            Class<?> clazz = Class.forName(FRAMEWORK_ENTRY_CLASS, true, getFrameworkClassLoader());
             Method method = clazz.getMethod("writeModuleConfig", String.class, String.class);
             method.invoke(null, moduleKey, rawContent);
-            Log.d(TAG, "Successfully invoked framework SpoofUtils.writeModuleConfig for: " + moduleKey);
+            Log.d(TAG, "Successfully invoked OemPortsUtils.writeModuleConfig for: " + moduleKey);
             return true;
         } catch (Throwable t) {
-            Log.e(TAG, "Reflection SpoofUtils write error for module " + moduleKey, t);
+            Log.e(TAG, "Reflection OemPortsUtils write error for module " + moduleKey, t);
             return false;
         }
     }
 
     private static boolean invokeFrameworkClearConfig(String moduleKey) {
         try {
-            Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
+            Class<?> clazz = Class.forName(FRAMEWORK_ENTRY_CLASS, true, getFrameworkClassLoader());
             Method method = clazz.getMethod("clearModuleConfig", String.class);
             method.invoke(null, moduleKey);
-            Log.d(TAG, "Successfully invoked framework SpoofUtils.clearModuleConfig for: " + moduleKey);
+            Log.d(TAG, "Successfully invoked OemPortsUtils.clearModuleConfig for: " + moduleKey);
             return true;
         } catch (Throwable t) {
-            Log.e(TAG, "Reflection SpoofUtils clear error for module " + moduleKey, t);
+            Log.e(TAG, "Reflection OemPortsUtils clear error for module " + moduleKey, t);
             return false;
         }
     }
