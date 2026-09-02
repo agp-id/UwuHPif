@@ -1,7 +1,6 @@
 package com.uwuh.utils;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -23,7 +22,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements GamePropsThermalController.LogCallback {
 
     private static final int REQ_PICK_KEYBOX = 1001;
     private static final int REQ_PICK_PIF = 1002;
@@ -86,17 +85,20 @@ public class MainActivity extends Activity {
         // 1. Switch Bootloader
         switchBootloader.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_BOOTLOADER, String.valueOf(isChecked));
+            appendLog("Bootloader prop set to: " + isChecked);
         });
 
         // 2. Switch PIF
         switchPIF.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_PIF, String.valueOf(isChecked));
             switchFinsky.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            appendLog("PIF prop set to: " + isChecked);
         });
 
         // 2b. Switch Play Store Fingerprint (Finsky)
         switchFinsky.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_FINSKY, String.valueOf(isChecked));
+            appendLog("Finsky prop set to: " + isChecked);
         });
 
         // 3. Switch Manual Mode
@@ -106,19 +108,21 @@ public class MainActivity extends Activity {
 
             runAsyncWithLock(() -> {
                 UwuhManager.syncAllToFramework(isChecked);
-            }, null);
+            }, () -> appendLog("Custom Mode switched to: " + isChecked));
         });
 
         // 4. Switch GameProps
         switchGameProps.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, String.valueOf(isChecked));
             panelGamePropsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            appendLog("GameProps prop set to: " + isChecked);
         });
 
         // 5. Switch Thermals
         switchThermals.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_THERMALS, String.valueOf(isChecked));
             panelThermalsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            appendLog("Thermals prop set to: " + isChecked);
         });
 
         // Tombol Pilih File Keybox & PIF
@@ -140,6 +144,7 @@ public class MainActivity extends Activity {
             }, () -> {
                 Toast.makeText(MainActivity.this, "PIF berhasil diterapkan!", Toast.LENGTH_SHORT).show();
                 loadPifContentToEditText();
+                appendLog("Manual PIF content applied & chunked");
             });
         });
 
@@ -151,25 +156,31 @@ public class MainActivity extends Activity {
             }, () -> {
                 Toast.makeText(MainActivity.this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
+                appendLog("Manual trigger sync completed");
             });
         });
 
-        // === LISTENER GAMEPROPS & THERMALS ===
+        // === LISTENER GAMEPROPS & THERMALS (Menggunakan GamePropsThermalController) ===
 
-        // Popup Edit App Config GameProps
-        btnGameProps.setOnClickListener(v -> showJsonEditorDialog("Edit GameProps Config", UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS));
+        // Popup App List GUI GameProps
+        btnGameProps.setOnClickListener(v -> 
+            GamePropsThermalController.showAppConfigDialog(MainActivity.this, true, MainActivity.this));
 
-        // Popup Pilihan Devices Preset GameProps
-        btnDevices.setOnClickListener(v -> showDevicesPresetDialog());
+        // Popup Device Manager Preset GameProps
+        btnDevices.setOnClickListener(v -> 
+            GamePropsThermalController.showDevicesManagerDialog(MainActivity.this, MainActivity.this));
 
-        // Reset GameProps ke Default
-        btnResetGameProps.setOnClickListener(v -> showResetConfirmDialog("GameProps", UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS));
+        // Reset GameProps ke Default Raw
+        btnResetGameProps.setOnClickListener(v -> 
+            GamePropsThermalController.resetGameProps(MainActivity.this, MainActivity.this));
 
-        // Popup Edit Thermals
-        btnThermals.setOnClickListener(v -> showJsonEditorDialog("Edit Thermals Config", UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS));
+        // Popup App List GUI Thermals
+        btnThermals.setOnClickListener(v -> 
+            GamePropsThermalController.showAppConfigDialog(MainActivity.this, false, MainActivity.this));
 
-        // Reset Thermals ke Default
-        btnResetThermals.setOnClickListener(v -> showResetConfirmDialog("Thermals", UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS));
+        // Reset Thermals ke Default Raw
+        btnResetThermals.setOnClickListener(v -> 
+            GamePropsThermalController.resetThermals(MainActivity.this, MainActivity.this));
 
         // Copy Log Button
         btnCopyLog.setOnClickListener(v -> {
@@ -183,64 +194,17 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Membuka Popup Editor untuk Mengubah Berkas JSON (GameProps / Thermals)
+     * Implementation dari LogCallback interface GamePropsThermalController
      */
-    private void showJsonEditorDialog(String title, String filePath, String moduleKey) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(title);
-
-        final EditText input = new EditText(this);
-        input.setText(UwuhManager.readFile(filePath));
-        input.setMinLines(8);
-        input.setGravity(android.view.Gravity.TOP);
-        builder.setView(input);
-
-        builder.setPositiveButton("Simpan", (dialog, which) -> {
-            String newContent = input.getText().toString().trim();
-            runAsyncWithLock(() -> {
-                UwuhManager.writeAndSync(moduleKey, filePath, newContent);
-            }, () -> {
-                Toast.makeText(MainActivity.this, title + " berhasil disimpan!", Toast.LENGTH_SHORT).show();
-            });
-        });
-
-        builder.setNegativeButton("Batal", (dialog, which) -> dialog.cancel());
-        builder.show();
+    @Override
+    public void log(String msg) {
+        runOnUiThread(() -> appendLog(msg));
     }
 
-    /**
-     * Membuka Popup Pemilihan Preset Device GameProps
-     */
-    private void showDevicesPresetDialog() {
-        final String[] devices = {"ROG Phone 8 Pro", "Xiaomi 14 Pro", "Galaxy S24 Ultra", "iPad Pro M4"};
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Pilih Preset Device GameProps");
-        builder.setItems(devices, (dialog, which) -> {
-            String selectedDevice = devices[which];
-            Toast.makeText(MainActivity.this, "Device dipilih: " + selectedDevice, Toast.LENGTH_SHORT).show();
-            // Nanti dapat disesuaikan logika penulisan preset JSON berdasarkan device terpilih
-        });
-        builder.show();
-    }
-
-    /**
-     * Popup Konfirmasi Reset Config
-     */
-    private void showResetConfirmDialog(String name, String filePath, String moduleKey) {
-        new AlertDialog.Builder(this)
-                .setTitle("Reset " + name)
-                .setMessage("Apakah Anda yakin ingin menghapus konfigurasi " + name + "?")
-                .setPositiveButton("Ya", (dialog, which) -> {
-                    runAsyncWithLock(() -> {
-                        File f = new File(filePath);
-                        if (f.exists()) f.delete();
-                        UwuhManager.syncToFramework(moduleKey, filePath);
-                    }, () -> {
-                        Toast.makeText(MainActivity.this, name + " telah di-reset!", Toast.LENGTH_SHORT).show();
-                    });
-                })
-                .setNegativeButton("Batal", null)
-                .show();
+    private void appendLog(String msg) {
+        String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+        String currentLog = tvLog.getText().toString();
+        tvLog.setText("[" + time + "] " + msg + "\n" + currentLog);
     }
 
     /**
@@ -356,6 +320,7 @@ public class MainActivity extends Activity {
                 Toast.makeText(MainActivity.this, "File berhasil ditulis dan disinkronkan!", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
                 loadPifContentToEditText();
+                appendLog("Custom file imported & synced to framework");
             });
         }
     }
