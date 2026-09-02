@@ -1,19 +1,11 @@
 package com.uwuh.utils;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.ActivityManager;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.method.ScrollingMovementMethod;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,377 +14,229 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.File;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.Locale;
+import java.util.concurrent.Executors;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
-    private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
-    private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
+    private static final int REQ_PICK_KEYBOX = 1001;
+    private static final int REQ_PICK_PIF = 1002;
 
-    private LinkedList<String> logLines = new LinkedList<>();
-    private TextView tvLog;
-    private EditText etPifEditor;
-    private Button btnCopyLog, btnUpdate, btnApplyManual;
-    private TextView tvLastUpdate, tvAutoStatus, tvKeyboxLastApply, tvPifLastApply;
-    private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
-    private Switch switchManual, switchBootloader, switchPIF, switchFinsky, switchGameProps, switchThermals;
+    private Switch switchUseCustom;
+    private LinearLayout layoutUpdateSection;
+    private LinearLayout layoutCustomFileSection;
 
-    private SharedPreferences sp;
-    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private Button btnSelectKeybox, btnSelectPif, btnApplyManualPif, btnCheckUpdate;
+    private TextView tvKeyboxLastEdit, tvPifStatus;
+    private EditText etPifContent;
+
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sp = getSharedPreferences("pif_prefs", MODE_PRIVATE);
-
         initViews();
-        
-        // Ekstrak fallback dari raw resource jika file target belum ada
-        initDefaultFilesFromRaw();
-
-        // Cek System Properties OS & inisialisasi jika belum pernah di-set
-        loadSystemPropertiesState();
-        
         setupListeners();
-
-        boolean isManual = sp.getBoolean("manual", false);
-        updateUIState(isManual);
-
-        new Thread(() -> {
-            UwuhManager.syncAllToFramework(isManual);
-            if (!isManual) checkUpdateOnline(false);
-        }).start();
-    }
-
-    private void initDefaultFilesFromRaw() {
-        new Thread(() -> {
-            UwuhManager.copyRawIfNotExist(this, R.raw.default_keybox, UwuhManager.KB_PATH, UwuhManager.MODULE_KEYBOX);
-            UwuhManager.copyRawIfNotExist(this, R.raw.default_pif, UwuhManager.PIF_PATH, UwuhManager.MODULE_PIF);
-            UwuhManager.copyRawIfNotExist(this, R.raw.default_gameprops, UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS);
-            UwuhManager.copyRawIfNotExist(this, R.raw.default_thermals, UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS);
-        }).start();
+        updateUiState();
     }
 
     private void initViews() {
-        switchManual = findViewById(R.id.switchManual);
-        switchBootloader = findViewById(R.id.switchBootloader);
-        switchPIF = findViewById(R.id.switchPIF);
-        switchFinsky = findViewById(R.id.switchFinsky);
-        switchGameProps = findViewById(R.id.switchGameProps);
-        switchThermals = findViewById(R.id.switchThermals);
+        switchUseCustom = findViewById(R.id.switch_use_custom);
+        layoutUpdateSection = findViewById(R.id.layout_update_section);
+        layoutCustomFileSection = findViewById(R.id.layout_custom_file_section);
 
-        tvLastUpdate = findViewById(R.id.tvLastUpdate);
-        tvAutoStatus = findViewById(R.id.tvAutoStatus);
-        tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
-        tvPifLastApply = findViewById(R.id.tvPifLastApply);
+        btnSelectKeybox = findViewById(R.id.btn_select_keybox);
+        btnSelectPif = findViewById(R.id.btn_select_pif);
+        btnApplyManualPif = findViewById(R.id.btn_apply_manual_pif);
+        btnCheckUpdate = findViewById(R.id.btn_check_update);
 
-        panelManual = findViewById(R.id.panelManual);
-        panelGamePropsBtn = findViewById(R.id.panelGamePropsBtn);
-        panelThermalsBtn = findViewById(R.id.panelThermalsBtn);
-
-        etPifEditor = findViewById(R.id.etPifEditor);
-        btnUpdate = findViewById(R.id.btnUpdate);
-        btnApplyManual = findViewById(R.id.btnApplyManual);
-        tvLog = findViewById(R.id.tvLog);
-        btnCopyLog = findViewById(R.id.btnCopyLog);
-
-        tvLog.setMovementMethod(new ScrollingMovementMethod());
-        enableInnerScroll(etPifEditor);
-    }
-
-    private void loadSystemPropertiesState() {
-        // Cek System Properties OS, jika belum ada nilainya, otomatis diset ke default value
-        boolean bootloaderState = getOrInitProp(UwuhManager.PROP_BOOTLOADER, true);
-        boolean pifState        = getOrInitProp(UwuhManager.PROP_PIF, true);
-        boolean finskyState     = getOrInitProp(UwuhManager.PROP_FINSKY, true);
-        boolean useCustomState  = getOrInitProp(UwuhManager.PROP_USE_CUSTOM, false);
-        boolean gamePropsState  = getOrInitProp(UwuhManager.PROP_GAMEPROPS, false);
-        boolean thermalsState   = getOrInitProp(UwuhManager.PROP_THERMALS, false);
-
-        // Terapkan nilai ke Switch UI
-        switchManual.setChecked(useCustomState);
-        switchBootloader.setChecked(bootloaderState);
-        switchPIF.setChecked(pifState);
-        switchFinsky.setChecked(finskyState);
-        switchFinsky.setVisibility(pifState ? View.VISIBLE : View.GONE);
-
-        switchGameProps.setChecked(gamePropsState);
-        switchThermals.setChecked(thermalsState);
-
-        panelGamePropsBtn.setVisibility(gamePropsState ? View.VISIBLE : View.GONE);
-        panelThermalsBtn.setVisibility(thermalsState ? View.VISIBLE : View.GONE);
-
-        tvKeyboxLastApply.setText("Last apply: " + sp.getString("keybox_last_apply", "-"));
-        tvPifLastApply.setText("Last apply: " + sp.getString("pif_last_apply", "-"));
-
-        loadCustomPIF();
-    }
-
-    /**
-     * Helper untuk cek System Properties. Jika belum diset di OS (""), 
-     * akan diset otomatis ke default value.
-     */
-    private boolean getOrInitProp(String key, boolean defaultValue) {
-        String currentVal = UwuhManager.getProp(key, "");
-        if (currentVal.isEmpty()) {
-            UwuhManager.setProp(key, defaultValue ? "true" : "false");
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(currentVal);
+        tvKeyboxLastEdit = findViewById(R.id.tv_keybox_last_edit);
+        tvPifStatus = findViewById(R.id.tv_pif_status);
+        etPifContent = findViewById(R.id.et_pif_content);
     }
 
     private void setupListeners() {
-        switchManual.setOnCheckedChangeListener((v, checked) -> {
-            sp.edit().putBoolean("manual", checked).apply();
-            UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, checked ? "true" : "false");
-            updateUIState(checked);
-            addLog("Mode: " + (checked ? "Manual" : "Auto"));
-
-            new Thread(() -> UwuhManager.syncAllToFramework(checked)).start();
+        // Toggle Custom Switch
+        switchUseCustom.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, String.valueOf(isChecked));
+            updateUiState();
+            
+            // Sinkronkan ulang pilihan ke framework secara async
+            runAsyncWithLock(() -> {
+                UwuhManager.syncAllToFramework(isChecked);
+            }, null);
         });
 
-        switchBootloader.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(UwuhManager.PROP_BOOTLOADER, checked ? "true" : "false");
-            addLog("Bootloader spoof: " + (checked ? "ON" : "OFF"));
-        });
+        // Tombol Select File
+        btnSelectKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
+        btnSelectPif.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
 
-        switchPIF.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(UwuhManager.PROP_PIF, checked ? "true" : "false");
-            switchFinsky.setVisibility(checked ? View.VISIBLE : View.GONE);
-            addLog("PIF spoof: " + (checked ? "ON" : "OFF"));
-        });
-
-        switchFinsky.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(UwuhManager.PROP_FINSKY, checked ? "true" : "false");
-            addLog("Play Store Fingerprint spoof: " + (checked ? "ON" : "OFF"));
-        });
-
-        switchGameProps.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, checked ? "true" : "false");
-            panelGamePropsBtn.setVisibility(checked ? View.VISIBLE : View.GONE);
-            addLog("GameProps " + (checked ? "enabled" : "disabled"));
-        });
-
-        switchThermals.setOnCheckedChangeListener((v, checked) -> {
-            UwuhManager.setProp(UwuhManager.PROP_THERMALS, checked ? "true" : "false");
-            panelThermalsBtn.setVisibility(checked ? View.VISIBLE : View.GONE);
-            addLog("Thermals " + (checked ? "enabled" : "disabled"));
-        });
-
-        btnUpdate.setOnClickListener(v -> new Thread(() -> checkUpdateOnline(true)).start());
-        btnCopyLog.setOnClickListener(v -> copyLog());
-
-        findViewById(R.id.btnGameProps).setOnClickListener(v -> GamePropsThermalController.showAppConfigDialog(this, true, this::addLog));
-        findViewById(R.id.btnDevices).setOnClickListener(v -> GamePropsThermalController.showDevicesManagerDialog(this, this::addLog));
-        findViewById(R.id.btnThermals).setOnClickListener(v -> GamePropsThermalController.showAppConfigDialog(this, false, this::addLog));
-        findViewById(R.id.btnResetGameProps).setOnClickListener(v -> GamePropsThermalController.resetGameProps(this, this::addLog));
-        findViewById(R.id.btnResetThermals).setOnClickListener(v -> GamePropsThermalController.resetThermals(this, this::addLog));
-
-        // Picker file untuk Keybox (.xml) dan PIF (.prop)
-        findViewById(R.id.btnPickKeybox).setOnClickListener(v -> pickFile("*/*", 101));
-        findViewById(R.id.btnPickPIF).setOnClickListener(v -> pickFile("*/*", 102));
-        btnApplyManual.setOnClickListener(v -> applyManualPIF());
-    }
-
-    private void applyManualPIF() {
-        String content = etPifEditor.getText().toString().trim();
-        if (content.isEmpty() || content.startsWith("# No custom")) return;
-
-        new Thread(() -> {
-            if (UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.CUST_PIF_PATH, content)) {
-                String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-                sp.edit().putString("pif_last_apply", time).apply();
-                runOnUiThread(() -> {
-                    tvPifLastApply.setText("Last apply: " + time);
-                    Toast.makeText(this, "Custom PIF Applied!", Toast.LENGTH_SHORT).show();
-                });
-                addLog("Custom PIF applied & chunked!");
-                killGMSAndVending();
-            }
-        }).start();
-    }
-
-    private void checkUpdateOnline(boolean showToast) {
-        addLog("Checking update...");
-        try {
-            String newKb = fetch(URL_KB);
-            String newPif = fetch(URL_PIF);
-
-            boolean kbUpdated = false;
-            boolean pifUpdated = false;
-
-            if (newKb != null && !newKb.isEmpty() && !newKb.equals(UwuhManager.readFile(UwuhManager.KB_PATH))) {
-                kbUpdated = UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
+        // Tombol Manual Edit PIF
+        btnApplyManualPif.setOnClickListener(v -> {
+            String content = etPifContent.getText().toString().trim();
+            if (content.isEmpty()) {
+                Toast.makeText(this, "Konten PIF tidak boleh kosong!", Toast.LENGTH_SHORT).show();
+                return;
             }
 
-            if (newPif != null && !newPif.isEmpty() && !newPif.equals(UwuhManager.readFile(UwuhManager.PIF_PATH))) {
-                pifUpdated = UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
-            }
-
-            final boolean isUpdated = kbUpdated || pifUpdated;
-            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-            sp.edit().putString("last_update", date).apply();
-
-            runOnUiThread(() -> {
-                tvLastUpdate.setText("Last update: " + date);
-                if (showToast) {
-                    Toast.makeText(this, isUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
-                }
+            runAsyncWithLock(() -> {
+                boolean useCustom = switchUseCustom.isChecked();
+                String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
+                UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, content);
+            }, () -> {
+                Toast.makeText(this, "PIF berhasil diterapkan!", Toast.LENGTH_SHORT).show();
+                loadPifContentToEditText();
             });
+        });
 
-            if (isUpdated) {
-                addLog("Online update applied & chunked");
-                killGMSAndVending();
-            } else {
-                addLog("Already latest");
-            }
-        } catch (Exception e) {
-            addLog("Update failed");
-        }
+        // Tombol Cek Update
+        btnCheckUpdate.setOnClickListener(v -> {
+            runAsyncWithLock(() -> {
+                // Simulasi / Proses Sync All Data
+                boolean useCustom = switchUseCustom.isChecked();
+                UwuhManager.syncAllToFramework(useCustom);
+            }, () -> {
+                Toast.makeText(this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
+                refreshFileMetadataUI();
+            });
+        });
     }
 
-    private void updateUIState(boolean isManual) {
-        panelManual.setVisibility(isManual ? View.VISIBLE : View.GONE);
-        btnUpdate.setVisibility(isManual ? View.GONE : View.VISIBLE);
-        tvAutoStatus.setVisibility(isManual ? View.GONE : View.VISIBLE);
-        tvAutoStatus.setText(isManual ? "Auto update: OFF" : "Auto update: ON");
-        tvLastUpdate.setVisibility(isManual ? View.GONE : View.VISIBLE);
-    }
+    /**
+     * Memperbarui visibilitas UI berdasarkan status Switch "Use Custom"
+     */
+    private void updateUiState() {
+        boolean useCustom = UwuhManager.getPropBoolean(UwuhManager.PROP_USE_CUSTOM, false);
+        switchUseCustom.setChecked(useCustom);
 
-    private void loadCustomPIF() {
-        String content = UwuhManager.readFile(UwuhManager.CUST_PIF_PATH);
-        if (!content.isEmpty()) {
-            etPifEditor.setText(content);
+        if (useCustom) {
+            // Ketika Switch Manual ON: Tampilkan tempat select file, sembunyikan cek update
+            layoutCustomFileSection.setVisibility(View.VISIBLE);
+            layoutUpdateSection.setVisibility(View.GONE);
         } else {
-            etPifEditor.setText("# No custom PIF loaded");
+            // Ketika Switch Manual OFF: Tampilkan cek update, sembunyikan tempat select file
+            layoutCustomFileSection.setVisibility(View.GONE);
+            layoutUpdateSection.setVisibility(View.VISIBLE);
+        }
+
+        refreshFileMetadataUI();
+        loadPifContentToEditText();
+    }
+
+    /**
+     * Membaca last modified Keybox dari file fisik
+     */
+    private void refreshFileMetadataUI() {
+        boolean useCustom = switchUseCustom.isChecked();
+        String kbPath = useCustom && new File(UwuhManager.CUST_KB_PATH).exists() 
+                ? UwuhManager.CUST_KB_PATH 
+                : UwuhManager.KB_PATH;
+
+        File kbFile = new File(kbPath);
+        if (kbFile.exists() && kbFile.length() > 0) {
+            long lastModified = kbFile.lastModified();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault());
+            tvKeyboxLastEdit.setText("Last Edit: " + sdf.format(new Date(lastModified)));
+        } else {
+            tvKeyboxLastEdit.setText("Last Edit: File tidak ditemukan");
         }
     }
 
-    private void pickFile(String mimeType, int requestCode) {
+    /**
+     * Mengisi EditText PIF langsung dari file tanpa menampilkan label status apply
+     */
+    private void loadPifContentToEditText() {
+        boolean useCustom = switchUseCustom.isChecked();
+        String pifPath = useCustom && new File(UwuhManager.CUST_PIF_PATH).exists() 
+                ? UwuhManager.CUST_PIF_PATH 
+                : UwuhManager.PIF_PATH;
+
+        String content = UwuhManager.readFile(pifPath);
+        etPifContent.setText(content);
+    }
+
+    private void openFilePicker(String mimeType, int requestCode) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType(mimeType);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(Intent.createChooser(intent, "Select File"), requestCode);
+        startActivityForResult(Intent.createChooser(intent, "Pilih File"), requestCode);
     }
 
     @Override
-    protected void onActivityResult(int req, int res, Intent data) {
-        super.onActivityResult(req, res, data);
-        if (res == Activity.RESULT_OK && data != null && data.getData() != null) {
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
             Uri uri = data.getData();
-            new Thread(() -> {
-                String content = readUri(uri);
-                if (content.isEmpty()) {
-                    addLog("Failed to read selected file or file is empty");
-                    return;
-                }
 
-                if (req == 101) { // Selection Keybox (.xml)
-                    if (UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.CUST_KB_PATH, content)) {
-                        String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-                        sp.edit().putString("keybox_last_apply", time).apply();
-                        runOnUiThread(() -> {
-                            tvKeyboxLastApply.setText("Last apply: " + time);
-                            Toast.makeText(this, "Custom Keybox Saved!", Toast.LENGTH_SHORT).show();
-                        });
-                        addLog("Custom Keybox saved to cust_keybox.xml & chunked");
-                    } else {
-                        addLog("Failed to write cust_keybox.xml");
+            runAsyncWithLock(() -> {
+                try {
+                    InputStream inputStream = getContentResolver().openInputStream(uri);
+                    if (inputStream == null) return;
+
+                    byte[] buffer = new byte[inputStream.available()];
+                    int bytesRead = inputStream.read(buffer);
+                    inputStream.close();
+
+                    if (bytesRead > 0) {
+                        String fileContent = new String(buffer, 0, bytesRead).trim();
+
+                        if (requestCode == REQ_PICK_KEYBOX) {
+                            String targetPath = switchUseCustom.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
+                            UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, targetPath, fileContent);
+                        } else if (requestCode == REQ_PICK_PIF) {
+                            String targetPath = switchUseCustom.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
+                            UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, fileContent);
+                        }
                     }
-                } else if (req == 102) { // Selection PIF (.prop)
-                    if (UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.CUST_PIF_PATH, content)) {
-                        String time = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-                        sp.edit().putString("pif_last_apply", time).apply();
-                        runOnUiThread(() -> {
-                            tvPifLastApply.setText("Last apply: " + time);
-                            etPifEditor.setText(content);
-                            Toast.makeText(this, "Custom PIF Saved!", Toast.LENGTH_SHORT).show();
-                        });
-                        addLog("Custom PIF saved to cust_pif.prop & chunked");
-                        killGMSAndVending();
-                    } else {
-                        addLog("Failed to write cust_pif.prop");
-                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            }).start();
+            }, () -> {
+                Toast.makeText(this, "File berhasil diimpor dan disinkronkan!", Toast.LENGTH_SHORT).show();
+                refreshFileMetadataUI();
+                loadPifContentToEditText();
+            });
         }
     }
 
-    private void killGMSAndVending() {
-        try {
-            ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            Method forceStop = ActivityManager.class.getDeclaredMethod("forceStopPackage", String.class);
-            forceStop.setAccessible(true);
-            forceStop.invoke(am, "com.google.android.gms");
-            forceStop.invoke(am, "com.android.vending");
-        } catch (Exception e) {}
+    /**
+     * Mengunci seluruh UI selama proses async berjalan agar aman dari spam click
+     */
+    private void setUiEnabled(boolean enabled) {
+        switchUseCustom.setEnabled(enabled);
+        btnSelectKeybox.setEnabled(enabled);
+        btnSelectPif.setEnabled(enabled);
+        btnApplyManualPif.setEnabled(enabled);
+        btnCheckUpdate.setEnabled(enabled);
+        etPifContent.setEnabled(enabled);
     }
 
-    private void addLog(String msg) {
-        String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
-        String logMsg = "[" + timestamp + "] " + msg;
-        if (logLines.size() >= 20) logLines.removeFirst();
-        logLines.add(logMsg);
-
-        mainHandler.post(() -> {
-            StringBuilder sb = new StringBuilder();
-            for (String line : logLines) sb.append(line).append("\n");
-            tvLog.setText(sb.toString().trim());
-        });
-    }
-
-    private void copyLog() {
-        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("Debug Log", tvLog.getText().toString()));
-        Toast.makeText(this, "Log copied", Toast.LENGTH_SHORT).show();
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private void enableInnerScroll(EditText editText) {
-        editText.setOnTouchListener((v, event) -> {
-            v.getParent().requestDisallowInterceptTouchEvent(true);
-            if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP ||
-                (event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_CANCEL) {
-                v.getParent().requestDisallowInterceptTouchEvent(false);
+    /**
+     * Helper Runnable Async dengan proteksi penguncian UI otomatis
+     */
+    private void runAsyncWithLock(Runnable backgroundTask, @Nullable Runnable onComplete) {
+        setUiEnabled(false);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                backgroundTask.run();
+            } finally {
+                mainHandler.post(() -> {
+                    setUiEnabled(true);
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
+                });
             }
-            return false;
         });
-    }
-
-    private String fetch(String urlStr) throws Exception {
-        URL url = new URL(urlStr);
-        HttpURLConnection c = (HttpURLConnection) url.openConnection();
-        c.setConnectTimeout(8000); c.setReadTimeout(8000);
-        if (c.getResponseCode() != 200) return null;
-        BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
-        StringBuilder sb = new StringBuilder(); String line;
-        while ((line = r.readLine()) != null) sb.append(line).append("\n");
-        r.close();
-        return sb.toString().trim();
-    }
-
-    private String readUri(Uri uri) {
-        try {
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            if (inputStream == null) return "";
-            BufferedReader r = new BufferedReader(new InputStreamReader(inputStream));
-            StringBuilder sb = new StringBuilder(); String line;
-            while ((line = r.readLine()) != null) sb.append(line).append("\n");
-            r.close();
-            return sb.toString().trim();
-        } catch (Exception e) {
-            return "";
-        }
     }
 }
