@@ -20,6 +20,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -37,8 +38,7 @@ public class GamePropsThermalController {
         String defaultOption = isGameProps ? "None" : "Default";
 
         List<String> options = new ArrayList<>();
-        options.add(defaultOption);
-
+        List<String> dynamicOptions = new ArrayList<>(); // Tempat opsi selain default untuk diurutkan
         HashMap<String, String> labelToKeyMap = new HashMap<>();
 
         if (file.exists()) {
@@ -60,13 +60,20 @@ public class GamePropsThermalController {
                         label = isGameProps ? key : "profile " + key;
                     }
 
-                    options.add(label);
+                    dynamicOptions.add(label);
                     labelToKeyMap.put(label, key);
                 }
             } catch (Exception e) { 
                 e.printStackTrace(); 
             }
         }
+
+        // Urutkan opsi secara alfabetis (A-Z)
+        Collections.sort(dynamicOptions, String.CASE_INSENSITIVE_ORDER);
+
+        // Gabungkan: Default Option tetap di urutan paling atas (indeks 0)
+        options.add(defaultOption);
+        options.addAll(dynamicOptions);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_app_config, null);
@@ -94,6 +101,9 @@ public class GamePropsThermalController {
 
             allApps.add(new AppModel(appName, pkgName, pkg.applicationInfo.loadIcon(pm), isSys, config));
         }
+
+        // Urutkan daftar aplikasi terinstal secara alfabetis berdasarkan Nama App
+        Collections.sort(allApps, (a1, a2) -> a1.getAppName().compareToIgnoreCase(a2.getAppName()));
 
         AppConfigAdapter adapter = new AppConfigAdapter(context, filterApps(allApps, false), options);
         lvList.setAdapter(adapter);
@@ -137,6 +147,9 @@ public class GamePropsThermalController {
                 while (keys.hasNext()) deviceList.add(keys.next());
             }
         } catch (Exception e) { e.printStackTrace(); }
+
+        // Urutkan daftar device secara alfabetis
+        Collections.sort(deviceList, String.CASE_INSENSITIVE_ORDER);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, deviceList);
         lvDevices.setAdapter(adapter);
@@ -265,7 +278,6 @@ public class GamePropsThermalController {
                 JSONObject obj = root.optJSONObject(key);
                 if (obj == null) continue;
 
-                // Baca LABEL jika ada, jika tidak pakai fallback
                 String customLabel = obj.optString("LABEL", "").trim();
                 String label;
                 if (!customLabel.isEmpty()) {
