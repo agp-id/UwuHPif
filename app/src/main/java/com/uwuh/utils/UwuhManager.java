@@ -1,6 +1,7 @@
 package com.uwuh.utils;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -10,8 +11,7 @@ import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
+import java.security.MessageDigest;
 
 public class UwuhManager {
     private static final String TAG = "UwuhManager";
@@ -29,7 +29,6 @@ public class UwuhManager {
     public static final String MODULE_GAMEPROPS = "g";
     public static final String MODULE_THERMALS = "t";
 
-    // Standardized UWUH System Properties Prefix
     public static final String PROP_BOOTLOADER = "persist.sys.uwuh.utils.bootloader";
     public static final String PROP_PIF        = "persist.sys.uwuh.utils.fingerprint";
     public static final String PROP_FINSKY     = "persist.sys.uwuh.utils.finsky";
@@ -37,10 +36,8 @@ public class UwuhManager {
     public static final String PROP_GAMEPROPS  = "persist.sys.uwuh.utils.gameprops";
     public static final String PROP_THERMALS   = "persist.sys.uwuh.utils.perapp_thermals";
 
-    // TARGET PINTU MASUK KE FRAMEWORK
     private static final String FRAMEWORK_ENTRY_CLASS = "com.android.internal.util.danda.OemPortsUtils";
-
-    private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
+    private static final String PREF_HASHES = "uwuh_file_hashes";
 
     private static ClassLoader getFrameworkClassLoader() {
         try {
@@ -81,44 +78,67 @@ public class UwuhManager {
         }
     }
 
-    public static synchronized void syncToFramework(String moduleKey, String filePath) {
+    /**
+     * Hitung SHA-256 Hash dari string isi file
+     */
+    private static String calculateHash(String content) {
+        if (content == null || content.isEmpty()) return "";
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(content.getBytes("UTF-8"));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public static synchronized void syncToFramework(Context context, String moduleKey, String filePath) {
         File file = new File(filePath);
+        Context dpContext = context.createDeviceProtectedStorageContext();
+        SharedPreferences sp = dpContext.getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
 
         if (!file.exists() || file.length() == 0) {
-            if (sLastModifiedMap.containsKey(filePath)) {
+            if (sp.contains(moduleKey)) {
                 invokeFrameworkClearConfig(moduleKey);
-                sLastModifiedMap.remove(filePath);
+                sp.edit().remove(moduleKey).apply();
             }
-            return;
-        }
-
-        long currentLastModified = file.lastModified();
-        Long previousLastModified = sLastModifiedMap.get(filePath);
-
-        if (previousLastModified != null && previousLastModified == currentLastModified) {
             return;
         }
 
         String rawContent = readFile(filePath);
-        if (!rawContent.isEmpty()) {
+        if (rawContent.isEmpty()) return;
+
+        String currentHash = calculateHash(rawContent);
+        String lastSyncedHash = sp.getString(moduleKey, "");
+
+        // HANYA DIPANGGIL JIKA ISI FILE/HASH BERBEDA!
+        if (!currentHash.equals(lastSyncedHash)) {
             boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
             if (success) {
-                sLastModifiedMap.put(filePath, currentLastModified);
-                Log.d(TAG, "Chunk synced via OemPortsUtils for: " + moduleKey);
+                sp.edit().putString(moduleKey, currentHash).apply();
+                Log.d(TAG, "Chunk synced via OemPortsUtils for: " + moduleKey + " (Hash Updated)");
             }
+        } else {
+            Log.d(TAG, "Skip syncing " + moduleKey + ": Content has not changed.");
         }
     }
 
-    public static void syncAllToFramework(boolean useCustom) {
-        syncToFramework(MODULE_KEYBOX, useCustom && new File(CUST_KB_PATH).exists() ? CUST_KB_PATH : KB_PATH);
-        syncToFramework(MODULE_PIF, useCustom && new File(CUST_PIF_PATH).exists() ? CUST_PIF_PATH : PIF_PATH);
-        syncToFramework(MODULE_GAMEPROPS, GAMEPROPS_PATH);
-        syncToFramework(MODULE_THERMALS, THERMALS_PATH);
+    public static void syncAllToFramework(Context context, boolean useCustom) {
+        syncToFramework(context, MODULE_KEYBOX, useCustom && new File(CUST_KB_PATH).exists() ? CUST_KB_PATH : KB_PATH);
+        syncToFramework(context, MODULE_PIF, useCustom && new File(CUST_PIF_PATH).exists() ? CUST_PIF_PATH : PIF_PATH);
+        syncToFramework(context, MODULE_GAMEPROPS, GAMEPROPS_PATH);
+        syncToFramework(context, MODULE_THERMALS, THERMALS_PATH);
     }
 
-    public static boolean writeAndSync(String moduleKey, String path, String content) {
+    public static boolean writeAndSync(Context context, String moduleKey, String path, String content) {
         if (writeFile(path, content)) {
-            syncToFramework(moduleKey, path);
+            syncToFramework(context, moduleKey, path);
             return true;
         }
         return false;
@@ -129,7 +149,7 @@ public class UwuhManager {
         if (!file.exists() || file.length() == 0) {
             String content = readRawRes(ctx, rawResId);
             if (!content.isEmpty()) {
-                writeAndSync(moduleKey, targetPath, content);
+                writeAndSync(ctx, moduleKey, targetPath, content);
                 Log.d(TAG, "Copied default raw resource to: " + targetPath);
             }
         }
