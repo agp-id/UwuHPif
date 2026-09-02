@@ -25,7 +25,6 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
             
-            // Menggunakan Device Protected Context agar SharedPreferences aman dibaca saat Direct Boot
             Context directBootContext = context.createDeviceProtectedStorageContext();
             SharedPreferences sp = directBootContext.getSharedPreferences("pif_prefs", Context.MODE_PRIVATE);
             boolean isAuto = !sp.getBoolean("manual", false);
@@ -43,25 +42,11 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     private void applyFallback(Context context) {
-        if (!new java.io.File(UwuhManager.KB_PATH).exists()) {
-            String data = UwuhManager.readRawRes(context, R.raw.default_keybox);
-            if (!data.isEmpty()) UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, data);
-        }
-
-        if (!new java.io.File(UwuhManager.PIF_PATH).exists()) {
-            String data = UwuhManager.readRawRes(context, R.raw.default_pif);
-            if (!data.isEmpty()) UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, data);
-        }
-
-        if (!new java.io.File(UwuhManager.GAMEPROPS_PATH).exists()) {
-            String data = UwuhManager.readRawRes(context, R.raw.default_gameprops);
-            if (!data.isEmpty()) UwuhManager.writeAndSync(UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, data);
-        }
-
-        if (!new java.io.File(UwuhManager.THERMALS_PATH).exists()) {
-            String data = UwuhManager.readRawRes(context, R.raw.default_thermals);
-            if (!data.isEmpty()) UwuhManager.writeAndSync(UwuhManager.MODULE_THERMALS, UwuhManager.THERMALS_PATH, data);
-        }
+        // Auto copy dari res/raw ke /data/system/uwuh jika berkas belum ada
+        UwuhManager.copyRawIfNotExist(context, R.raw.default_keybox, UwuhManager.KB_PATH, UwuhManager.MODULE_KEYBOX);
+        UwuhManager.copyRawIfNotExist(context, R.raw.default_pif, UwuhManager.PIF_PATH, UwuhManager.MODULE_PIF);
+        UwuhManager.copyRawIfNotExist(context, R.raw.default_gameprops, UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS);
+        UwuhManager.copyRawIfNotExist(context, R.raw.default_thermals, UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS);
     }
 
     private void checkUpdateOnline(Context context, SharedPreferences sp) {
