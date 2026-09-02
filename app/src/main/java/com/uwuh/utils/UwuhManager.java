@@ -30,7 +30,7 @@ public class UwuhManager {
     public static final String MODULE_GAMEPROPS = "g";
     public static final String MODULE_THERMALS = "t";
 
-    // Standardized UWUH Properties Prefix
+    // Standardized UWUH System Properties
     public static final String PROP_BOOTLOADER = "persist.sys.uwuh.utils.bootloader";
     public static final String PROP_PIF        = "persist.sys.uwuh.utils.fingerprint";
     public static final String PROP_FINSKY     = "persist.sys.uwuh.utils.finsky";
@@ -40,6 +40,9 @@ public class UwuhManager {
 
     private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
 
+    /**
+     * Dapatkan ClassLoader milik framework.jar via Build Class
+     */
     private static ClassLoader getFrameworkClassLoader() {
         return Build.class.getClassLoader();
     }
