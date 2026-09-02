@@ -22,8 +22,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class GamePropsThermalController {
 
@@ -41,7 +43,6 @@ public class GamePropsThermalController {
         List<String> dynamicOptions = new ArrayList<>();
         HashMap<String, String> labelToKeyMap = new HashMap<>();
 
-        // Prioritaskan membaca langsung file fisik yang ada di /data/system/uwuh/ tanpa menimpa dari res
         if (file.exists() && file.length() > 0) {
             try {
                 JSONObject root = new JSONObject(UwuhManager.readFile(filePath));
@@ -66,10 +67,7 @@ public class GamePropsThermalController {
             }
         }
 
-        // Urutkan opsi selain default secara alfabetis (A-Z)
         Collections.sort(dynamicOptions, String.CASE_INSENSITIVE_ORDER);
-
-        // Tambahkan opsi default di urutan pertama
         options.add(defaultOption);
         options.addAll(dynamicOptions);
 
@@ -241,9 +239,6 @@ public class GamePropsThermalController {
         dialog.show();
     }
 
-    /**
-     * KHUSUS RESET GAMEPROPS: Baru membaca dan menimpa file dari R.raw.default_gameprops
-     */
     public static void resetGameProps(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_gameprops);
         if (!data.isEmpty() && UwuhManager.writeAndSync(UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, data)) {
@@ -252,9 +247,6 @@ public class GamePropsThermalController {
         }
     }
 
-    /**
-     * KHUSUS RESET THERMALS: Baru membaca dan menimpa file dari R.raw.default_thermals
-     */
     public static void resetThermals(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_thermals);
         if (!data.isEmpty() && UwuhManager.writeAndSync(UwuhManager.MODULE_THERMALS, UwuhManager.THERMALS_PATH, data)) {
@@ -307,24 +299,65 @@ public class GamePropsThermalController {
         try {
             File file = new File(path);
             JSONObject root = file.exists() ? new JSONObject(UwuhManager.readFile(path)) : new JSONObject();
-            HashMap<String, JSONArray> configGroups = new HashMap<>();
 
+            // 1. Kumpulkan daftar semua package name dari app yang terinstal saat ini
+            HashSet<String> installedPkgSet = new HashSet<>();
+            Map<String, String> currentSelectionMap = new HashMap<>();
+
+            for (AppModel app : allApps) {
+                installedPkgSet.add(app.getPackageName());
+                currentSelectionMap.put(app.getPackageName(), app.getSelectedConfig());
+            }
+
+            // 2. Baca ulang data lama untuk mempertahankan app uninstalled & membersihkan duplikasi
+            Map<String, HashSet<String>> finalPkgGroups = new HashMap<>();
+            Iterator<String> keys = root.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                finalPkgGroups.put(key, new HashSet<>());
+
+                JSONObject obj = root.optJSONObject(key);
+                if (obj != null) {
+                    JSONArray oldPkgs = obj.optJSONArray("PKGNAMES");
+                    if (oldPkgs != null) {
+                        for (int i = 0; i < oldPkgs.length(); i++) {
+                            String oldPkg = oldPkgs.getString(i);
+                            // Jika app TIDAK terinstal saat ini, tetap pertahankan di key lamanya
+                            if (!installedPkgSet.contains(oldPkg)) {
+                                finalPkgGroups.get(key).add(oldPkg);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Masukkan pilihan app terinstal saat ini ke key yang sesuai
             for (AppModel app : allApps) {
                 String selectedLabel = app.getSelectedConfig();
                 if (!selectedLabel.equals(defaultOption)) {
                     String actualKey = labelToKeyMap.get(selectedLabel);
                     if (actualKey != null) {
-                        if (!configGroups.containsKey(actualKey)) configGroups.put(actualKey, new JSONArray());
-                        configGroups.get(actualKey).put(app.getPackageName());
+                        if (!finalPkgGroups.containsKey(actualKey)) {
+                            finalPkgGroups.put(actualKey, new HashSet<>());
+                        }
+                        // Menambahkan ke Set menjamin pkg name hanya ada di 1 key ini
+                        finalPkgGroups.get(actualKey).add(app.getPackageName());
                     }
                 }
             }
 
-            Iterator<String> keys = root.keys();
-            while (keys.hasNext()) {
-                String k = keys.next();
-                JSONObject obj = root.getJSONObject(k);
-                obj.put("PKGNAMES", configGroups.containsKey(k) ? configGroups.get(k) : new JSONArray());
+            // 4. Tulis kembali ke JSONObject root
+            for (Map.Entry<String, HashSet<String>> entry : finalPkgGroups.entrySet()) {
+                String key = entry.getKey();
+                JSONArray newArray = new JSONArray();
+                for (String pkg : entry.getValue()) {
+                    newArray.put(pkg);
+                }
+
+                if (root.has(key)) {
+                    JSONObject obj = root.getJSONObject(key);
+                    obj.put("PKGNAMES", newArray);
+                }
             }
 
             return UwuhManager.writeFile(path, root.toString(4));
