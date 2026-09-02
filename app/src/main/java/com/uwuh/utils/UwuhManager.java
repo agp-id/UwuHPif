@@ -30,19 +30,16 @@ public class UwuhManager {
     public static final String MODULE_GAMEPROPS = "g";
     public static final String MODULE_THERMALS = "t";
 
-    // Matching Properties Name dengan Framework OemPortsUtils
-    public static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
-    public static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
-    public static final String PROP_FINSKY = "persist.sys.oemports10t.utils.finsky";
-    public static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
-    public static final String PROP_GAMEPROPS = "persist.sys.oemports10t.utils.gameprops";
-    public static final String PROP_THERMALS = "persist.sys.oemports10t.utils.perapp_thermals";
+    // Standardized UWUH Properties Prefix
+    public static final String PROP_BOOTLOADER = "persist.sys.uwuh.utils.bootloader";
+    public static final String PROP_PIF        = "persist.sys.uwuh.utils.fingerprint";
+    public static final String PROP_FINSKY     = "persist.sys.uwuh.utils.finsky";
+    public static final String PROP_USE_CUSTOM = "persist.sys.uwuh.utils.use_custom";
+    public static final String PROP_GAMEPROPS  = "persist.sys.uwuh.utils.gameprops";
+    public static final String PROP_THERMALS   = "persist.sys.uwuh.utils.perapp_thermals";
 
     private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
 
-    /**
-     * Dapatkan ClassLoader murni milik framework.jar melalui android.os.Build
-     */
     private static ClassLoader getFrameworkClassLoader() {
         return Build.class.getClassLoader();
     }
