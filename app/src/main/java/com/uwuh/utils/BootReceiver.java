@@ -32,7 +32,7 @@ public class BootReceiver extends BroadcastReceiver {
             new Thread(() -> {
                 applyFallback(directBootContext);
 
-                UwuhManager.syncAllToFramework(!isAuto);
+                UwuhManager.syncAllToFramework(directBootContext, !isAuto);
 
                 if (isAuto) {
                     checkUpdateOnline(directBootContext, sp);
@@ -55,11 +55,11 @@ public class BootReceiver extends BroadcastReceiver {
             String newPif = fetch(URL_PIF);
 
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(UwuhManager.readFile(UwuhManager.KB_PATH))) {
-                UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
+                UwuhManager.writeAndSync(context, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
             }
 
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(UwuhManager.readFile(UwuhManager.PIF_PATH))) {
-                UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
+                UwuhManager.writeAndSync(context, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
