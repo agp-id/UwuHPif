@@ -27,7 +27,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
     private static final int REQ_PICK_KEYBOX = 1001;
     private static final int REQ_PICK_PIF = 1002;
 
-    // View berdasarkan ID di activity_main.xml
     private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals;
     private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
     private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnUpdate, btnCopyLog;
@@ -65,7 +64,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         btnUpdate = findViewById(R.id.btnUpdate);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
-        // Tombol GameProps & Thermals
         btnGameProps = findViewById(R.id.btnGameProps);
         btnDevices = findViewById(R.id.btnDevices);
         btnResetGameProps = findViewById(R.id.btnResetGameProps);
@@ -82,54 +80,46 @@ public class MainActivity extends Activity implements GamePropsThermalController
     }
 
     private void setupListeners() {
-        // 1. Switch Bootloader
         switchBootloader.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_BOOTLOADER, String.valueOf(isChecked));
             appendLog("Bootloader prop set to: " + isChecked);
         });
 
-        // 2. Switch PIF
         switchPIF.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_PIF, String.valueOf(isChecked));
             switchFinsky.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             appendLog("PIF prop set to: " + isChecked);
         });
 
-        // 2b. Switch Play Store Fingerprint (Finsky)
         switchFinsky.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_FINSKY, String.valueOf(isChecked));
             appendLog("Finsky prop set to: " + isChecked);
         });
 
-        // 3. Switch Manual Mode
         switchManual.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, String.valueOf(isChecked));
             updateUiState();
 
             runAsyncWithLock(() -> {
-                UwuhManager.syncAllToFramework(isChecked);
+                UwuhManager.syncAllToFramework(MainActivity.this, isChecked);
             }, () -> appendLog("Custom Mode switched to: " + isChecked));
         });
 
-        // 4. Switch GameProps
         switchGameProps.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, String.valueOf(isChecked));
             panelGamePropsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             appendLog("GameProps prop set to: " + isChecked);
         });
 
-        // 5. Switch Thermals
         switchThermals.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_THERMALS, String.valueOf(isChecked));
             panelThermalsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
             appendLog("Thermals prop set to: " + isChecked);
         });
 
-        // Tombol Pilih File Keybox & PIF
         btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
         btnPickPIF.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
 
-        // Tombol Apply Manual PIF
         btnApplyManual.setOnClickListener(v -> {
             String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
@@ -140,7 +130,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
             runAsyncWithLock(() -> {
                 boolean useCustom = switchManual.isChecked();
                 String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
-                UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, content);
+                UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, content);
             }, () -> {
                 Toast.makeText(MainActivity.this, "PIF berhasil diterapkan!", Toast.LENGTH_SHORT).show();
                 loadPifContentToEditText();
@@ -148,11 +138,10 @@ public class MainActivity extends Activity implements GamePropsThermalController
             });
         });
 
-        // Tombol Cek Update Online / Sync All
         btnUpdate.setOnClickListener(v -> {
             runAsyncWithLock(() -> {
                 boolean useCustom = switchManual.isChecked();
-                UwuhManager.syncAllToFramework(useCustom);
+                UwuhManager.syncAllToFramework(MainActivity.this, useCustom);
             }, () -> {
                 Toast.makeText(MainActivity.this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
@@ -160,29 +149,21 @@ public class MainActivity extends Activity implements GamePropsThermalController
             });
         });
 
-        // === LISTENER GAMEPROPS & THERMALS (Menggunakan GamePropsThermalController) ===
-
-        // Popup App List GUI GameProps
         btnGameProps.setOnClickListener(v -> 
             GamePropsThermalController.showAppConfigDialog(MainActivity.this, true, MainActivity.this));
 
-        // Popup Device Manager Preset GameProps
         btnDevices.setOnClickListener(v -> 
             GamePropsThermalController.showDevicesManagerDialog(MainActivity.this, MainActivity.this));
 
-        // Reset GameProps ke Default Raw
         btnResetGameProps.setOnClickListener(v -> 
             GamePropsThermalController.resetGameProps(MainActivity.this, MainActivity.this));
 
-        // Popup App List GUI Thermals
         btnThermals.setOnClickListener(v -> 
             GamePropsThermalController.showAppConfigDialog(MainActivity.this, false, MainActivity.this));
 
-        // Reset Thermals ke Default Raw
         btnResetThermals.setOnClickListener(v -> 
             GamePropsThermalController.resetThermals(MainActivity.this, MainActivity.this));
 
-        // Copy Log Button
         btnCopyLog.setOnClickListener(v -> {
             android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
             android.content.ClipData clip = android.content.ClipData.newPlainText("UwuhLog", tvLog.getText().toString());
@@ -193,9 +174,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         });
     }
 
-    /**
-     * Implementation dari LogCallback interface GamePropsThermalController
-     */
     @Override
     public void log(String msg) {
         runOnUiThread(() -> appendLog(msg));
@@ -207,9 +185,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvLog.setText("[" + time + "] " + msg + "\n" + currentLog);
     }
 
-    /**
-     * Membaca seluruh SystemProperties dan memperbarui status visual UI
-     */
     private void updateUiState() {
         boolean useBootloader = UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true);
         boolean usePif = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
@@ -245,9 +220,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         loadPifContentToEditText();
     }
 
-    /**
-     * Membaca timestamp Last Modified dari file Keybox fisik
-     */
     private void refreshFileMetadataUI() {
         boolean useCustom = switchManual.isChecked();
         String kbPath = useCustom && new File(UwuhManager.CUST_KB_PATH).exists()
@@ -266,9 +238,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvPifLastApply.setVisibility(View.GONE);
     }
 
-    /**
-     * Memuat isi file PIF langsung ke EditText
-     */
     private void loadPifContentToEditText() {
         boolean useCustom = switchManual.isChecked();
         String pifPath = useCustom && new File(UwuhManager.CUST_PIF_PATH).exists()
@@ -307,10 +276,10 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
                         if (requestCode == REQ_PICK_KEYBOX) {
                             String targetPath = switchManual.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
-                            UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, targetPath, fileContent);
+                            UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_KEYBOX, targetPath, fileContent);
                         } else if (requestCode == REQ_PICK_PIF) {
                             String targetPath = switchManual.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
-                            UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, fileContent);
+                            UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, fileContent);
                         }
                     }
                 } catch (Exception e) {
@@ -325,9 +294,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         }
     }
 
-    /**
-     * Mengunci seluruh tombol & switch saat proses async berlangsung
-     */
     private void setUiEnabled(boolean enabled) {
         switchBootloader.setEnabled(enabled);
         switchPIF.setEnabled(enabled);
@@ -351,9 +317,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         etPifEditor.setEnabled(enabled);
     }
 
-    /**
-     * Helper Runnable Async dengan proteksi penguncian UI
-     */
     private void runAsyncWithLock(Runnable backgroundTask, Runnable onComplete) {
         setUiEnabled(false);
         Executors.newSingleThreadExecutor().execute(() -> {
