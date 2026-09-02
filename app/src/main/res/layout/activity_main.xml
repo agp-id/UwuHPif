@@ -53,7 +53,6 @@
                 android:text="Manual Mode"
                 android:textSize="16sp" />
 
-            <!-- Panel Manual Mode (Muncul saat Manual Mode = ON) -->
             <LinearLayout
                 android:id="@+id/panelManual"
                 android:layout_width="match_parent"
@@ -65,7 +64,7 @@
                     android:id="@+id/btnPickKeybox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pick Custom Keybox File"
+                    android:text="Pick Custom Keybox"
                     android:textSize="14sp" />
 
                 <TextView
@@ -80,7 +79,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Pick Custom PIF File"
+                    android:text="Pick Custom PIF"
                     android:textSize="14sp" />
 
                 <TextView
@@ -113,38 +112,31 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- 4. Panel Online Update (Muncul saat Manual Mode = OFF) -->
-            <LinearLayout
-                android:id="@+id/panelAutoUpdate"
+            <!-- 4. Cek Update -->
+            <TextView
+                android:id="@+id/tvAutoStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Auto update: ON"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvLastUpdate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last update: -"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btnUpdate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_marginTop="2dp"
+                android:text="Check Update Online"
+                android:textSize="14sp" />
 
-                <TextView
-                    android:id="@+id/tvAutoStatus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Auto update: ON"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:id="@+id/tvLastUpdate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Last update: -"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btnUpdate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Check Update Online"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Garis Pemisah -->
+            <!-- Garis Pemisah Putih Di Atas GameProps -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -236,7 +228,7 @@
                 android:layout_marginBottom="12dp"
                 android:background="#FFFFFF" />
 
-            <!-- Log Header & Copy Button -->
+            <!-- == Log Header & Tombol Copy Kecil == -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -266,7 +258,7 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Log Viewer: TextView (Non-selectable, Scrollable) -->
+            <!-- Log Viewer: Scrollable TextView -->
             <TextView
                 android:id="@+id/tvLog"
                 android:layout_width="match_parent"
@@ -279,7 +271,6 @@
                 android:scrollbars="vertical"
                 android:text="[Log ready]"
                 android:textColor="#00FF00"
-                android:setTextIsSelectable="false"
                 android:textSize="11sp" />
 
         </LinearLayout>
