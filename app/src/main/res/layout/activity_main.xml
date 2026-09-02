@@ -5,7 +5,6 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- ScrollView Utama: Indikator scroll dihilangkan (scrollbars="none") -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -34,6 +33,17 @@
                 android:text="Spoof PIF"
                 android:textSize="16sp" />
 
+            <!-- 2b. Spoof PS Fingerprint (Finsky) - Muncul jika PIF Active -->
+            <Switch
+                android:id="@+id/switchFinsky"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp"
+                android:text="Spoof Play Store Fingerprint"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
             <!-- 3. Manual Mode -->
             <Switch
                 android:id="@+id/switchManual"
@@ -43,6 +53,7 @@
                 android:text="Manual Mode"
                 android:textSize="16sp" />
 
+            <!-- Panel Manual Mode (Muncul saat Manual Mode = ON) -->
             <LinearLayout
                 android:id="@+id/panelManual"
                 android:layout_width="match_parent"
@@ -54,7 +65,7 @@
                     android:id="@+id/btnPickKeybox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pick Custom Keybox"
+                    android:text="Pick Custom Keybox File"
                     android:textSize="14sp" />
 
                 <TextView
@@ -69,7 +80,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Pick Custom PIF"
+                    android:text="Pick Custom PIF File"
                     android:textSize="14sp" />
 
                 <TextView
@@ -79,7 +90,6 @@
                     android:text="Last apply: -"
                     android:textSize="11sp" />
 
-                <!-- PIF Editor: Menampilkan scrollbar jika teks melebihi tinggi box -->
                 <EditText
                     android:id="@+id/etPifEditor"
                     android:layout_width="match_parent"
@@ -103,31 +113,38 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- 4. Cek Update -->
-            <TextView
-                android:id="@+id/tvAutoStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Auto update: ON"
-                android:textSize="11sp" />
-
-            <TextView
-                android:id="@+id/tvLastUpdate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Last update: -"
-                android:textSize="11sp" />
-
-            <Button
-                android:id="@+id/btnUpdate"
+            <!-- 4. Panel Online Update (Muncul saat Manual Mode = OFF) -->
+            <LinearLayout
+                android:id="@+id/panelAutoUpdate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Check Update Online"
-                android:textSize="14sp" />
-            
-             <!-- Garis Pemisah Putih Di Atas GameProps -->
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAutoStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Auto update: ON"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/tvLastUpdate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Last update: -"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnUpdate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Check Update Online"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Garis Pemisah -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -219,7 +236,7 @@
                 android:layout_marginBottom="12dp"
                 android:background="#FFFFFF" />
 
-            <!-- == Log Header & Tombol Copy Kecil == -->
+            <!-- Log Header & Copy Button -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -249,8 +266,8 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Log Viewer: Menampilkan scrollbar jika teks log melebihi tinggi box -->
-            <EditText
+            <!-- Log Viewer: TextView (Non-selectable, Scrollable) -->
+            <TextView
                 android:id="@+id/tvLog"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
@@ -262,6 +279,7 @@
                 android:scrollbars="vertical"
                 android:text="[Log ready]"
                 android:textColor="#00FF00"
+                android:setTextIsSelectable="false"
                 android:textSize="11sp" />
 
         </LinearLayout>
