@@ -198,7 +198,8 @@ public class MainActivity extends Activity {
             String newKb = fetch(URL_KB);
             String newPif = fetch(URL_PIF);
 
-            boolean kbUpdated = false, pifUpdated = false;
+            boolean kbUpdated = false;
+            boolean pifUpdated = false;
 
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(UwuhManager.readFile(UwuhManager.KB_PATH))) {
                 kbUpdated = UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
@@ -208,15 +209,18 @@ public class MainActivity extends Activity {
                 pifUpdated = UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
             }
 
+            final boolean isUpdated = kbUpdated || pifUpdated;
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
             sp.edit().putString("last_update", date).apply();
 
             runOnUiThread(() -> {
                 tvLastUpdate.setText("Last update: " + date);
-                if (showToast) Toast.makeText(this, (kbUpdated || pifUpdated) ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
+                if (showToast) {
+                    Toast.makeText(this, isUpdated ? "Files updated!" : "Already latest.", Toast.LENGTH_SHORT).show();
+                }
             });
 
-            if (kbUpdated || pifUpdated) {
+            if (isUpdated) {
                 addLog("Online update applied & chunked");
                 killGMSAndVending();
             } else {
