@@ -115,6 +115,17 @@ public class UwuhManager {
         return false;
     }
 
+    public static void copyRawIfNotExist(Context ctx, int rawResId, String targetPath, String moduleKey) {
+        File file = new File(targetPath);
+        if (!file.exists() || file.length() == 0) {
+            String content = readRawRes(ctx, rawResId);
+            if (!content.isEmpty()) {
+                writeAndSync(moduleKey, targetPath, content);
+                Log.d(TAG, "Copied default raw resource to: " + targetPath);
+            }
+        }
+    }
+
     private static void invokeFrameworkWriteConfig(String moduleKey, String rawContent) {
         try {
             Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
@@ -155,6 +166,7 @@ public class UwuhManager {
             file.setWritable(true, false);
             return true;
         } catch (Exception e) {
+            Log.e(TAG, "Error writing file: " + path, e);
             return false;
         }
     }
