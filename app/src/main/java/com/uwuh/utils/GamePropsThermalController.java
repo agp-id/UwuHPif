@@ -40,7 +40,6 @@ public class GamePropsThermalController {
         options.add(defaultOption);
 
         HashMap<String, String> labelToKeyMap = new HashMap<>();
-        HashMap<String, String> thermalNameMap = getThermalNameMap(context);
 
         if (file.exists()) {
             try {
@@ -48,16 +47,25 @@ public class GamePropsThermalController {
                 Iterator<String> keys = root.keys();
                 while (keys.hasNext()) {
                     String key = keys.next();
-                    if (isGameProps) {
-                        options.add(key);
-                        labelToKeyMap.put(key, key);
+                    JSONObject obj = root.optJSONObject(key);
+
+                    // Ambil tag "LABEL" dari JSON jika ada
+                    String customLabel = (obj != null) ? obj.optString("LABEL", "").trim() : "";
+
+                    String label;
+                    if (!customLabel.isEmpty()) {
+                        label = customLabel;
                     } else {
-                        String label = thermalNameMap.containsKey(key) ? thermalNameMap.get(key) : "Thermal Profile " + key;
-                        options.add(label);
-                        labelToKeyMap.put(label, key);
+                        // Fallback jika LABEL kosong / tidak ada
+                        label = isGameProps ? key : "profile " + key;
                     }
+
+                    options.add(label);
+                    labelToKeyMap.put(label, key);
                 }
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) { 
+                e.printStackTrace(); 
+            }
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -72,7 +80,7 @@ public class GamePropsThermalController {
 
         tvTitle.setText(isGameProps ? "GameProps App Config" : "Thermals App Config");
 
-        HashMap<String, String> currentMap = parseJsonToMap(UwuhManager.readFile(filePath), isGameProps, thermalNameMap);
+        HashMap<String, String> currentMap = parseJsonToMap(UwuhManager.readFile(filePath), isGameProps);
 
         PackageManager pm = context.getPackageManager();
         List<PackageInfo> installedPackages = pm.getInstalledPackages(0);
@@ -238,18 +246,6 @@ public class GamePropsThermalController {
         }
     }
 
-    private static HashMap<String, String> getThermalNameMap(Context context) {
-        HashMap<String, String> map = new HashMap<>();
-        String[] thermalArray = context.getResources().getStringArray(R.array.thermal_options);
-        for (String entry : thermalArray) {
-            if (entry.contains(":")) {
-                String[] parts = entry.split(":", 2);
-                map.put(parts[0].trim(), parts[1].trim());
-            }
-        }
-        return map;
-    }
-
     private static List<AppModel> filterApps(List<AppModel> list, boolean showSystem) {
         List<AppModel> filtered = new ArrayList<>();
         for (AppModel app : list) {
@@ -258,7 +254,7 @@ public class GamePropsThermalController {
         return filtered;
     }
 
-    private static HashMap<String, String> parseJsonToMap(String jsonString, boolean isGameProps, HashMap<String, String> thermalNameMap) {
+    private static HashMap<String, String> parseJsonToMap(String jsonString, boolean isGameProps) {
         HashMap<String, String> map = new HashMap<>();
         if (jsonString.isEmpty()) return map;
         try {
@@ -268,13 +264,26 @@ public class GamePropsThermalController {
                 String key = keys.next();
                 JSONObject obj = root.optJSONObject(key);
                 if (obj == null) continue;
+
+                // Baca LABEL jika ada, jika tidak pakai fallback
+                String customLabel = obj.optString("LABEL", "").trim();
+                String label;
+                if (!customLabel.isEmpty()) {
+                    label = customLabel;
+                } else {
+                    label = isGameProps ? key : "profile " + key;
+                }
+
                 JSONArray pkgs = obj.optJSONArray("PKGNAMES");
                 if (pkgs != null) {
-                    String label = isGameProps ? key : (thermalNameMap.containsKey(key) ? thermalNameMap.get(key) : "Thermal Profile " + key);
-                    for (int i = 0; i < pkgs.length(); i++) map.put(pkgs.getString(i), label);
+                    for (int i = 0; i < pkgs.length(); i++) {
+                        map.put(pkgs.getString(i), label);
+                    }
                 }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) { 
+            e.printStackTrace(); 
+        }
         return map;
     }
 
@@ -303,6 +312,8 @@ public class GamePropsThermalController {
             }
 
             return UwuhManager.writeFile(path, root.toString(4));
-        } catch (Exception e) { return false; }
+        } catch (Exception e) { 
+            return false; 
+        }
     }
 }
