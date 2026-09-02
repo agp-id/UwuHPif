@@ -24,16 +24,19 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
-            SharedPreferences sp = context.getSharedPreferences("pif_prefs", Context.MODE_PRIVATE);
+            
+            // Menggunakan Device Protected Context agar SharedPreferences aman dibaca saat Direct Boot
+            Context directBootContext = context.createDeviceProtectedStorageContext();
+            SharedPreferences sp = directBootContext.getSharedPreferences("pif_prefs", Context.MODE_PRIVATE);
             boolean isAuto = !sp.getBoolean("manual", false);
 
             new Thread(() -> {
-                applyFallback(context);
+                applyFallback(directBootContext);
 
                 UwuhManager.syncAllToFramework(!isAuto);
 
                 if (isAuto) {
-                    checkUpdateOnline(context, sp);
+                    checkUpdateOnline(directBootContext, sp);
                 }
             }).start();
         }
