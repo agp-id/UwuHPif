@@ -41,7 +41,8 @@ public class UwuhManager {
     private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
 
     /**
-     * Mendapatkan ClassLoader dari framework.jar melalui android.os.Build
+     * Mendapatkan ClassLoader dari framework.jar (BootClassLoader) via Build class
+     * Ini mencegah terjadinya ClassNotFoundException pada class internal framework.
      */
     private static ClassLoader getFrameworkClassLoader() {
         return Build.class.getClassLoader();
@@ -97,9 +98,11 @@ public class UwuhManager {
 
         String rawContent = readFile(filePath);
         if (!rawContent.isEmpty()) {
-            invokeFrameworkWriteConfig(moduleKey, rawContent);
-            sLastModifiedMap.put(filePath, currentLastModified);
-            Log.d(TAG, "Chunk synced to RAM via Reflection for: " + moduleKey);
+            boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
+            if (success) {
+                sLastModifiedMap.put(filePath, currentLastModified);
+                Log.d(TAG, "Chunk synced to RAM via Reflection for: " + moduleKey);
+            }
         }
     }
 
@@ -129,26 +132,29 @@ public class UwuhManager {
         }
     }
 
-    private static void invokeFrameworkWriteConfig(String moduleKey, String rawContent) {
+    private static boolean invokeFrameworkWriteConfig(String moduleKey, String rawContent) {
         try {
-            // Melewati ClassLoader sistem agar SpoofUtils ditemukan
             Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
             Method method = clazz.getMethod("writeModuleConfig", String.class, String.class);
             method.invoke(null, moduleKey, rawContent);
             Log.d(TAG, "Successfully invoked framework SpoofUtils.writeModuleConfig for: " + moduleKey);
+            return true;
         } catch (Throwable t) {
-            Log.e(TAG, "Reflection SpoofUtils write error", t);
+            Log.e(TAG, "Reflection SpoofUtils write error for module " + moduleKey, t);
+            return false;
         }
     }
 
-    private static void invokeFrameworkClearConfig(String moduleKey) {
+    private static boolean invokeFrameworkClearConfig(String moduleKey) {
         try {
             Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
             Method method = clazz.getMethod("clearModuleConfig", String.class);
             method.invoke(null, moduleKey);
             Log.d(TAG, "Successfully invoked framework SpoofUtils.clearModuleConfig for: " + moduleKey);
+            return true;
         } catch (Throwable t) {
-            Log.e(TAG, "Reflection SpoofUtils clear error", t);
+            Log.e(TAG, "Reflection SpoofUtils clear error for module " + moduleKey, t);
+            return false;
         }
     }
 
