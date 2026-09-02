@@ -15,7 +15,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class BootReceiver extends BroadcastReceiver {
-    private static final String TAG = "PifManagerBoot";
+    private static final String TAG = "UwuhBoot";
 
     private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
     private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
@@ -25,16 +25,15 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action) || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
             SharedPreferences sp = context.getSharedPreferences("pif_prefs", Context.MODE_PRIVATE);
-            boolean isAuto = sp.getBoolean("auto", true);
+            boolean isAuto = !sp.getBoolean("manual", false);
 
             new Thread(() -> {
                 applyFallback(context);
-                
-                // Lakukan sync awal seluruh file /data/system/uwuh/ ke RAM Chunk
-                UwuhManager.syncAllToFramework();
+
+                UwuhManager.syncAllToFramework(!isAuto);
 
                 if (isAuto) {
-                    checkUpdateOnline(sp);
+                    checkUpdateOnline(context, sp);
                 }
             }).start();
         }
@@ -62,42 +61,34 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
-    private void checkUpdateOnline(SharedPreferences sp) {
+    private void checkUpdateOnline(Context context, SharedPreferences sp) {
         try {
             String newKb = fetch(URL_KB);
             String newPif = fetch(URL_PIF);
 
-            boolean updated = false;
-
             if (newKb != null && !newKb.isEmpty() && !newKb.equals(UwuhManager.readFile(UwuhManager.KB_PATH))) {
-                if (UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb)) updated = true;
+                UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
             }
 
             if (newPif != null && !newPif.isEmpty() && !newPif.equals(UwuhManager.readFile(UwuhManager.PIF_PATH))) {
-                if (UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif)) updated = true;
+                UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
             }
 
-            if (updated) {
-                String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-                sp.edit().putString("last_update", date).apply();
-                Log.d(TAG, "Auto update completed at boot and synced to RAM via Reflection!");
-            }
-
+            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+            sp.edit().putString("last_update", date).apply();
+            Log.d(TAG, "Boot update completed & chunked!");
         } catch (Exception e) {
-            Log.e(TAG, "Auto update failed: " + e.getMessage());
+            Log.e(TAG, "Boot update failed", e);
         }
     }
 
     private String fetch(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection c = (HttpURLConnection) url.openConnection();
-        c.setConnectTimeout(8000);
-        c.setReadTimeout(8000);
+        c.setConnectTimeout(8000); c.setReadTimeout(8000);
         if (c.getResponseCode() != 200) return null;
-
         BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
-        StringBuilder sb = new StringBuilder();
-        String line;
+        StringBuilder sb = new StringBuilder(); String line;
         while ((line = r.readLine()) != null) sb.append(line).append("\n");
         r.close();
         return sb.toString().trim();
