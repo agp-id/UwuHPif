@@ -38,10 +38,11 @@ public class GamePropsThermalController {
         String defaultOption = isGameProps ? "None" : "Default";
 
         List<String> options = new ArrayList<>();
-        List<String> dynamicOptions = new ArrayList<>(); // Tempat opsi selain default untuk diurutkan
+        List<String> dynamicOptions = new ArrayList<>();
         HashMap<String, String> labelToKeyMap = new HashMap<>();
 
-        if (file.exists()) {
+        // Prioritaskan membaca langsung file fisik yang ada di /data/system/uwuh/ tanpa menimpa dari res
+        if (file.exists() && file.length() > 0) {
             try {
                 JSONObject root = new JSONObject(UwuhManager.readFile(filePath));
                 Iterator<String> keys = root.keys();
@@ -49,14 +50,11 @@ public class GamePropsThermalController {
                     String key = keys.next();
                     JSONObject obj = root.optJSONObject(key);
 
-                    // Ambil tag "LABEL" dari JSON jika ada
                     String customLabel = (obj != null) ? obj.optString("LABEL", "").trim() : "";
-
                     String label;
                     if (!customLabel.isEmpty()) {
                         label = customLabel;
                     } else {
-                        // Fallback jika LABEL kosong / tidak ada
                         label = isGameProps ? key : "profile " + key;
                     }
 
@@ -68,10 +66,10 @@ public class GamePropsThermalController {
             }
         }
 
-        // Urutkan opsi secara alfabetis (A-Z)
+        // Urutkan opsi selain default secara alfabetis (A-Z)
         Collections.sort(dynamicOptions, String.CASE_INSENSITIVE_ORDER);
 
-        // Gabungkan: Default Option tetap di urutan paling atas (indeks 0)
+        // Tambahkan opsi default di urutan pertama
         options.add(defaultOption);
         options.addAll(dynamicOptions);
 
@@ -102,7 +100,6 @@ public class GamePropsThermalController {
             allApps.add(new AppModel(appName, pkgName, pkg.applicationInfo.loadIcon(pm), isSys, config));
         }
 
-        // Urutkan daftar aplikasi terinstal secara alfabetis berdasarkan Nama App
         Collections.sort(allApps, (a1, a2) -> a1.getAppName().compareToIgnoreCase(a2.getAppName()));
 
         AppConfigAdapter adapter = new AppConfigAdapter(context, filterApps(allApps, false), options);
@@ -148,7 +145,6 @@ public class GamePropsThermalController {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // Urutkan daftar device secara alfabetis
         Collections.sort(deviceList, String.CASE_INSENSITIVE_ORDER);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, deviceList);
@@ -245,17 +241,25 @@ public class GamePropsThermalController {
         dialog.show();
     }
 
+    /**
+     * KHUSUS RESET GAMEPROPS: Baru membaca dan menimpa file dari R.raw.default_gameprops
+     */
     public static void resetGameProps(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_gameprops);
         if (!data.isEmpty() && UwuhManager.writeAndSync(UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, data)) {
-            callback.log("GameProps reset & chunked");
+            callback.log("GameProps reset to default raw & chunked");
+            Toast.makeText(context, "GameProps Reset!", Toast.LENGTH_SHORT).show();
         }
     }
 
+    /**
+     * KHUSUS RESET THERMALS: Baru membaca dan menimpa file dari R.raw.default_thermals
+     */
     public static void resetThermals(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_thermals);
         if (!data.isEmpty() && UwuhManager.writeAndSync(UwuhManager.MODULE_THERMALS, UwuhManager.THERMALS_PATH, data)) {
-            callback.log("Thermals reset & chunked");
+            callback.log("Thermals reset to default raw & chunked");
+            Toast.makeText(context, "Thermals Reset!", Toast.LENGTH_SHORT).show();
         }
     }
 
