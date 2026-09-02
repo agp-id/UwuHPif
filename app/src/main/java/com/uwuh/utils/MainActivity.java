@@ -26,13 +26,12 @@ public class MainActivity extends Activity {
     private static final int REQ_PICK_KEYBOX = 1001;
     private static final int REQ_PICK_PIF = 1002;
 
-    private Switch switchUseCustom;
-    private LinearLayout layoutUpdateSection;
-    private LinearLayout layoutCustomFileSection;
-
-    private Button btnSelectKeybox, btnSelectPif, btnApplyManualPif, btnCheckUpdate;
-    private TextView tvKeyboxLastEdit, tvPifStatus;
-    private EditText etPifContent;
+    // View yang sesuai dengan ID di activity_main.xml
+    private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals;
+    private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
+    private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnUpdate, btnCopyLog;
+    private TextView tvKeyboxLastApply, tvPifLastApply, tvAutoStatus, tvLastUpdate, tvLog;
+    private EditText etPifEditor;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -47,46 +46,62 @@ public class MainActivity extends Activity {
     }
 
     private void initViews() {
-        switchUseCustom = findViewById(R.id.switch_use_custom);
-        layoutUpdateSection = findViewById(R.id.layout_update_section);
-        layoutCustomFileSection = findViewById(R.id.layout_custom_file_section);
+        switchBootloader = findViewById(R.id.switchBootloader);
+        switchPIF = findViewById(R.id.switchPIF);
+        switchFinsky = findViewById(R.id.switchFinsky);
+        switchManual = findViewById(R.id.switchManual);
+        switchGameProps = findViewById(R.id.switchGameProps);
+        switchThermals = findViewById(R.id.switchThermals);
 
-        btnSelectKeybox = findViewById(R.id.btn_select_keybox);
-        btnSelectPif = findViewById(R.id.btn_select_pif);
-        btnApplyManualPif = findViewById(R.id.btn_apply_manual_pif);
-        btnCheckUpdate = findViewById(R.id.btn_check_update);
+        panelManual = findViewById(R.id.panelManual);
+        panelGamePropsBtn = findViewById(R.id.panelGamePropsBtn);
+        panelThermalsBtn = findViewById(R.id.panelThermalsBtn);
 
-        tvKeyboxLastEdit = findViewById(R.id.tv_keybox_last_edit);
-        tvPifStatus = findViewById(R.id.tv_pif_status);
-        etPifContent = findViewById(R.id.et_pif_content);
+        btnPickKeybox = findViewById(R.id.btnPickKeybox);
+        btnPickPIF = findViewById(R.id.btnPickPIF);
+        btnApplyManual = findViewById(R.id.btnApplyManual);
+        btnUpdate = findViewById(R.id.btnUpdate);
+        btnCopyLog = findViewById(R.id.btnCopyLog);
+
+        tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
+        tvPifLastApply = findViewById(R.id.tvPifLastApply);
+        tvAutoStatus = findViewById(R.id.tvAutoStatus);
+        tvLastUpdate = findViewById(R.id.tvLastUpdate);
+        tvLog = findViewById(R.id.tvLog);
+
+        etPifEditor = findViewById(R.id.etPifEditor);
     }
 
     private void setupListeners() {
-        // Toggle Custom Switch
-        switchUseCustom.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        // Toggle Custom/Manual Switch
+        switchManual.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, String.valueOf(isChecked));
             updateUiState();
 
-            // Sinkronkan ulang pilihan ke framework secara async
             runAsyncWithLock(() -> {
                 UwuhManager.syncAllToFramework(isChecked);
             }, null);
         });
 
-        // Tombol Select File
-        btnSelectKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
-        btnSelectPif.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
+        // Toggle PIF Switch
+        switchPIF.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            switchFinsky.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
 
-        // Tombol Manual Edit PIF
-        btnApplyManualPif.setOnClickListener(v -> {
-            String content = etPifContent.getText().toString().trim();
+        // Pick File Keybox & PIF
+        btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
+        btnPickPIF.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
+
+        // Apply Manual PIF Editor Content
+        btnApplyManual.setOnClickListener(v -> {
+            String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
                 Toast.makeText(MainActivity.this, "Konten PIF tidak boleh kosong!", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             runAsyncWithLock(() -> {
-                boolean useCustom = switchUseCustom.isChecked();
+                boolean useCustom = switchManual.isChecked();
                 String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                 UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, content);
             }, () -> {
@@ -95,10 +110,10 @@ public class MainActivity extends Activity {
             });
         });
 
-        // Tombol Cek Update
-        btnCheckUpdate.setOnClickListener(v -> {
+        // Button Online Update / Sync All
+        btnUpdate.setOnClickListener(v -> {
             runAsyncWithLock(() -> {
-                boolean useCustom = switchUseCustom.isChecked();
+                boolean useCustom = switchManual.isChecked();
                 UwuhManager.syncAllToFramework(useCustom);
             }, () -> {
                 Toast.makeText(MainActivity.this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
@@ -108,20 +123,24 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Memperbarui visibilitas UI berdasarkan status Switch "Use Custom"
+     * Mengatur visibilitas panel Manual vs Cek Update
      */
     private void updateUiState() {
         boolean useCustom = UwuhManager.getPropBoolean(UwuhManager.PROP_USE_CUSTOM, false);
-        switchUseCustom.setChecked(useCustom);
+        switchManual.setChecked(useCustom);
 
         if (useCustom) {
-            // Ketika Switch Manual ON: Tampilkan tempat select file, sembunyikan cek update
-            layoutCustomFileSection.setVisibility(View.VISIBLE);
-            layoutUpdateSection.setVisibility(View.GONE);
+            // Switch Manual ON: Sembunyikan bagian update & Last update, munculkan panel Manual
+            panelManual.setVisibility(View.VISIBLE);
+            tvAutoStatus.setVisibility(View.GONE);
+            tvLastUpdate.setVisibility(View.GONE);
+            btnUpdate.setVisibility(View.GONE);
         } else {
-            // Ketika Switch Manual OFF: Tampilkan cek update, sembunyikan tempat select file
-            layoutCustomFileSection.setVisibility(View.GONE);
-            layoutUpdateSection.setVisibility(View.VISIBLE);
+            // Switch Manual OFF: Tampilkan bagian update, sembunyikan panel Manual
+            panelManual.setVisibility(View.GONE);
+            tvAutoStatus.setVisibility(View.VISIBLE);
+            tvLastUpdate.setVisibility(View.VISIBLE);
+            btnUpdate.setVisibility(View.VISIBLE);
         }
 
         refreshFileMetadataUI();
@@ -129,35 +148,38 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Membaca last modified Keybox dari file fisik
+     * Membaca timestamp Last Modified dari file Keybox fisik
      */
     private void refreshFileMetadataUI() {
-        boolean useCustom = switchUseCustom.isChecked();
-        String kbPath = useCustom && new File(UwuhManager.CUST_KB_PATH).exists() 
-                ? UwuhManager.CUST_KB_PATH 
+        boolean useCustom = switchManual.isChecked();
+        String kbPath = useCustom && new File(UwuhManager.CUST_KB_PATH).exists()
+                ? UwuhManager.CUST_KB_PATH
                 : UwuhManager.KB_PATH;
 
         File kbFile = new File(kbPath);
         if (kbFile.exists() && kbFile.length() > 0) {
             long lastModified = kbFile.lastModified();
             SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault());
-            tvKeyboxLastEdit.setText("Last Edit: " + sdf.format(new Date(lastModified)));
+            tvKeyboxLastApply.setText("Last apply: " + sdf.format(new Date(lastModified)));
         } else {
-            tvKeyboxLastEdit.setText("Last Edit: File tidak ditemukan");
+            tvKeyboxLastApply.setText("Last apply: -");
         }
+
+        // tvPifLastApply disembunyikan sesuai permintaan karena sudah tampil di etPifEditor
+        tvPifLastApply.setVisibility(View.GONE);
     }
 
     /**
-     * Mengisi EditText PIF langsung dari file
+     * Memuat isi file PIF langsung ke EditText
      */
     private void loadPifContentToEditText() {
-        boolean useCustom = switchUseCustom.isChecked();
-        String pifPath = useCustom && new File(UwuhManager.CUST_PIF_PATH).exists() 
-                ? UwuhManager.CUST_PIF_PATH 
+        boolean useCustom = switchManual.isChecked();
+        String pifPath = useCustom && new File(UwuhManager.CUST_PIF_PATH).exists()
+                ? UwuhManager.CUST_PIF_PATH
                 : UwuhManager.PIF_PATH;
 
         String content = UwuhManager.readFile(pifPath);
-        etPifContent.setText(content);
+        etPifEditor.setText(content);
     }
 
     private void openFilePicker(String mimeType, int requestCode) {
@@ -187,10 +209,10 @@ public class MainActivity extends Activity {
                         String fileContent = new String(buffer, 0, bytesRead).trim();
 
                         if (requestCode == REQ_PICK_KEYBOX) {
-                            String targetPath = switchUseCustom.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
+                            String targetPath = switchManual.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
                             UwuhManager.writeAndSync(UwuhManager.MODULE_KEYBOX, targetPath, fileContent);
                         } else if (requestCode == REQ_PICK_PIF) {
-                            String targetPath = switchUseCustom.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
+                            String targetPath = switchManual.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                             UwuhManager.writeAndSync(UwuhManager.MODULE_PIF, targetPath, fileContent);
                         }
                     }
@@ -198,7 +220,7 @@ public class MainActivity extends Activity {
                     e.printStackTrace();
                 }
             }, () -> {
-                Toast.makeText(MainActivity.this, "File berhasil diimpor dan disinkronkan!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "File berhasil ditulis dan disinkronkan!", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
                 loadPifContentToEditText();
             });
@@ -206,19 +228,27 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Mengunci seluruh UI selama proses async berjalan
+     * Mengunci seluruh komponen UI selama proses async berjalan
      */
     private void setUiEnabled(boolean enabled) {
-        switchUseCustom.setEnabled(enabled);
-        btnSelectKeybox.setEnabled(enabled);
-        btnSelectPif.setEnabled(enabled);
-        btnApplyManualPif.setEnabled(enabled);
-        btnCheckUpdate.setEnabled(enabled);
-        etPifContent.setEnabled(enabled);
+        switchBootloader.setEnabled(enabled);
+        switchPIF.setEnabled(enabled);
+        switchFinsky.setEnabled(enabled);
+        switchManual.setEnabled(enabled);
+        switchGameProps.setEnabled(enabled);
+        switchThermals.setEnabled(enabled);
+
+        btnPickKeybox.setEnabled(enabled);
+        btnPickPIF.setEnabled(enabled);
+        btnApplyManual.setEnabled(enabled);
+        btnUpdate.setEnabled(enabled);
+        btnCopyLog.setEnabled(enabled);
+
+        etPifEditor.setEnabled(enabled);
     }
 
     /**
-     * Helper Runnable Async dengan proteksi penguncian UI
+     * Helper Runnable Async dengan proteksi lock UI otomatis
      */
     private void runAsyncWithLock(Runnable backgroundTask, Runnable onComplete) {
         setUiEnabled(false);
