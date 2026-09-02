@@ -26,7 +26,7 @@ public class MainActivity extends Activity {
     private static final int REQ_PICK_KEYBOX = 1001;
     private static final int REQ_PICK_PIF = 1002;
 
-    // View yang sesuai dengan ID di activity_main.xml
+    // View berdasarkan ID di activity_main.xml
     private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals;
     private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
     private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnUpdate, btnCopyLog;
@@ -73,7 +73,23 @@ public class MainActivity extends Activity {
     }
 
     private void setupListeners() {
-        // Toggle Custom/Manual Switch
+        // 1. Switch Bootloader
+        switchBootloader.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_BOOTLOADER, String.valueOf(isChecked));
+        });
+
+        // 2. Switch PIF
+        switchPIF.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_PIF, String.valueOf(isChecked));
+            switchFinsky.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        // 2b. Switch Play Store Fingerprint (Finsky)
+        switchFinsky.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_FINSKY, String.valueOf(isChecked));
+        });
+
+        // 3. Switch Manual Mode
         switchManual.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, String.valueOf(isChecked));
             updateUiState();
@@ -83,16 +99,23 @@ public class MainActivity extends Activity {
             }, null);
         });
 
-        // Toggle PIF Switch
-        switchPIF.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            switchFinsky.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        // 4. Switch GameProps
+        switchGameProps.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, String.valueOf(isChecked));
+            panelGamePropsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
         });
 
-        // Pick File Keybox & PIF
+        // 5. Switch Thermals
+        switchThermals.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_THERMALS, String.valueOf(isChecked));
+            panelThermalsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        // Tombol Pilih File Keybox & PIF
         btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
         btnPickPIF.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
 
-        // Apply Manual PIF Editor Content
+        // Tombol Apply Manual PIF Editor Content
         btnApplyManual.setOnClickListener(v -> {
             String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
@@ -110,7 +133,7 @@ public class MainActivity extends Activity {
             });
         });
 
-        // Button Online Update / Sync All
+        // Tombol Cek Update Online / Sync All
         btnUpdate.setOnClickListener(v -> {
             runAsyncWithLock(() -> {
                 boolean useCustom = switchManual.isChecked();
@@ -123,20 +146,38 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Mengatur visibilitas panel Manual vs Cek Update
+     * Membaca seluruh SystemProperties dan memperbarui status visual UI
      */
     private void updateUiState() {
+        // Read all property values from SystemProperties
+        boolean useBootloader = UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true);
+        boolean usePif = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
+        boolean useFinsky = UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, false);
         boolean useCustom = UwuhManager.getPropBoolean(UwuhManager.PROP_USE_CUSTOM, false);
+        boolean useGameProps = UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false);
+        boolean useThermals = UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false);
+
+        // Set Switch states based on properties
+        switchBootloader.setChecked(useBootloader);
+        switchPIF.setChecked(usePif);
+        switchFinsky.setChecked(useFinsky);
         switchManual.setChecked(useCustom);
+        switchGameProps.setChecked(useGameProps);
+        switchThermals.setChecked(useThermals);
+
+        // Adjust visibility
+        switchFinsky.setVisibility(usePif ? View.VISIBLE : View.GONE);
+        panelGamePropsBtn.setVisibility(useGameProps ? View.VISIBLE : View.GONE);
+        panelThermalsBtn.setVisibility(useThermals ? View.VISIBLE : View.GONE);
 
         if (useCustom) {
-            // Switch Manual ON: Sembunyikan bagian update & Last update, munculkan panel Manual
+            // Sembunyikan bagian update & Last update, munculkan panel Manual
             panelManual.setVisibility(View.VISIBLE);
             tvAutoStatus.setVisibility(View.GONE);
             tvLastUpdate.setVisibility(View.GONE);
             btnUpdate.setVisibility(View.GONE);
         } else {
-            // Switch Manual OFF: Tampilkan bagian update, sembunyikan panel Manual
+            // Tampilkan bagian update, sembunyikan panel Manual
             panelManual.setVisibility(View.GONE);
             tvAutoStatus.setVisibility(View.VISIBLE);
             tvLastUpdate.setVisibility(View.VISIBLE);
@@ -165,7 +206,7 @@ public class MainActivity extends Activity {
             tvKeyboxLastApply.setText("Last apply: -");
         }
 
-        // tvPifLastApply disembunyikan sesuai permintaan karena sudah tampil di etPifEditor
+        // tvPifLastApply disembunyikan karena nilainya sudah terlihat langsung di EditText PIF
         tvPifLastApply.setVisibility(View.GONE);
     }
 
@@ -228,7 +269,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Mengunci seluruh komponen UI selama proses async berjalan
+     * Mengunci seluruh tombol & switch saat proses async berlangsung
      */
     private void setUiEnabled(boolean enabled) {
         switchBootloader.setEnabled(enabled);
@@ -248,7 +289,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Helper Runnable Async dengan proteksi lock UI otomatis
+     * Helper Runnable Async dengan proteksi penguncian UI
      */
     private void runAsyncWithLock(Runnable backgroundTask, Runnable onComplete) {
         setUiEnabled(false);
