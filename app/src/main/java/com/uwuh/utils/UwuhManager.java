@@ -1,7 +1,6 @@
 package com.uwuh.utils;
 
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -41,11 +40,16 @@ public class UwuhManager {
     private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
 
     /**
-     * Mendapatkan ClassLoader dari framework.jar (BootClassLoader) via Build class
-     * Ini mencegah terjadinya ClassNotFoundException pada class internal framework.
+     * Mendapatkan Framework/System ClassLoader murni dari android.os.SystemProperties.
+     * Ini menyelesaikan ClassNotFoundException saat memanggil SpoofUtils di framework.jar
      */
     private static ClassLoader getFrameworkClassLoader() {
-        return Build.class.getClassLoader();
+        try {
+            ClassLoader cl = Class.forName("android.os.SystemProperties").getClassLoader();
+            return (cl != null) ? cl : ClassLoader.getSystemClassLoader();
+        } catch (Throwable t) {
+            return ClassLoader.getSystemClassLoader();
+        }
     }
 
     public static String getProp(String key, String def) {
