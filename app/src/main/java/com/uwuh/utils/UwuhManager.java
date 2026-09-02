@@ -1,6 +1,7 @@
 package com.uwuh.utils;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -29,13 +30,26 @@ public class UwuhManager {
     public static final String MODULE_GAMEPROPS = "g";
     public static final String MODULE_THERMALS = "t";
 
+    // Matching Properties Name dengan Framework OemPortsUtils
+    public static final String PROP_BOOTLOADER = "persist.sys.oemports10t.utils.bootloader";
+    public static final String PROP_PIF = "persist.sys.oemports10t.utils.fingerprint";
+    public static final String PROP_FINSKY = "persist.sys.oemports10t.utils.finsky";
+    public static final String PROP_USE_CUSTOM = "persist.sys.oemports10t.utils.use_custom";
+    public static final String PROP_GAMEPROPS = "persist.sys.oemports10t.utils.gameprops";
+    public static final String PROP_THERMALS = "persist.sys.oemports10t.utils.perapp_thermals";
+
     private static final Map<String, Long> sLastModifiedMap = new HashMap<>();
 
-    // SystemProperties Helper via Reflection
+    /**
+     * Dapatkan ClassLoader murni milik framework.jar melalui android.os.Build
+     */
+    private static ClassLoader getFrameworkClassLoader() {
+        return Build.class.getClassLoader();
+    }
+
     public static String getProp(String key, String def) {
         try {
-            ClassLoader bootClassLoader = ClassLoader.getSystemClassLoader();
-            Class<?> c = Class.forName("android.os.SystemProperties", true, bootClassLoader);
+            Class<?> c = Class.forName("android.os.SystemProperties", true, getFrameworkClassLoader());
             Method get = c.getMethod("get", String.class, String.class);
             return (String) get.invoke(null, key, def);
         } catch (Exception e) {
@@ -45,8 +59,7 @@ public class UwuhManager {
 
     public static boolean getPropBoolean(String key, boolean def) {
         try {
-            ClassLoader bootClassLoader = ClassLoader.getSystemClassLoader();
-            Class<?> c = Class.forName("android.os.SystemProperties", true, bootClassLoader);
+            Class<?> c = Class.forName("android.os.SystemProperties", true, getFrameworkClassLoader());
             Method getBoolean = c.getMethod("getBoolean", String.class, boolean.class);
             return (boolean) getBoolean.invoke(null, key, def);
         } catch (Exception e) {
@@ -56,16 +69,14 @@ public class UwuhManager {
 
     public static void setProp(String key, String value) {
         try {
-            ClassLoader bootClassLoader = ClassLoader.getSystemClassLoader();
-            Class<?> c = Class.forName("android.os.SystemProperties", true, bootClassLoader);
+            Class<?> c = Class.forName("android.os.SystemProperties", true, getFrameworkClassLoader());
             Method set = c.getMethod("set", String.class, String.class);
             set.invoke(null, key, value);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to set SystemProperty: " + key);
+            Log.e(TAG, "Failed to set SystemProperty: " + key, e);
         }
     }
 
-    // Chunk Writer Helper
     public static synchronized void syncToFramework(String moduleKey, String filePath) {
         File file = new File(filePath);
 
@@ -109,10 +120,7 @@ public class UwuhManager {
 
     private static void invokeFrameworkWriteConfig(String moduleKey, String rawContent) {
         try {
-            // Gunakan ClassLoader sistem (BootClassLoader) untuk mencari Class bawaan Framework ROM
-            ClassLoader bootClassLoader = ClassLoader.getSystemClassLoader();
-            Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, bootClassLoader);
-
+            Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
             Method method = clazz.getMethod("writeModuleConfig", String.class, String.class);
             method.invoke(null, moduleKey, rawContent);
             Log.d(TAG, "Successfully invoked framework SpoofUtils.writeModuleConfig for: " + moduleKey);
@@ -123,9 +131,7 @@ public class UwuhManager {
 
     private static void invokeFrameworkClearConfig(String moduleKey) {
         try {
-            ClassLoader bootClassLoader = ClassLoader.getSystemClassLoader();
-            Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, bootClassLoader);
-
+            Class<?> clazz = Class.forName("com.android.internal.util.danda.SpoofUtils", true, getFrameworkClassLoader());
             Method method = clazz.getMethod("clearModuleConfig", String.class);
             method.invoke(null, moduleKey);
             Log.d(TAG, "Successfully invoked framework SpoofUtils.clearModuleConfig for: " + moduleKey);
