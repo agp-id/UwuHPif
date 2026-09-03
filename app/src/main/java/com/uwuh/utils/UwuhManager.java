@@ -1,7 +1,6 @@
 package com.uwuh.utils;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -243,11 +242,11 @@ public class UwuhManager {
             return;
         }
         
-        // ✅ STEP 1: Baca lastModified file
+        // ✅ Baca lastModified file
         long fileTime = file.lastModified();
         String currentVersion = getProp(getVersionProp(moduleKey), "0");
         
-        // ✅ STEP 2: Bandingkan dengan version prop
+        // ✅ Bandingkan dengan version prop
         if (String.valueOf(fileTime).equals(currentVersion)) {
             appendLog("Skip " + moduleKey + ": Version match (" + fileTime + ")");
             return;
@@ -255,14 +254,14 @@ public class UwuhManager {
         
         appendLog("Version mismatch for " + moduleKey + ": current=" + currentVersion + ", file=" + fileTime);
         
-        // ✅ STEP 3: Version berbeda → baca file
+        // ✅ Version berbeda → baca file
         String rawContent = readFile(actualPath);
         if (rawContent.isEmpty()) {
             appendLog("File empty for " + moduleKey + ", skipping");
             return;
         }
         
-        // ✅ STEP 4: Validasi
+        // ✅ Validasi
         boolean isValid = false;
         switch (moduleKey) {
             case MODULE_KEYBOX:
@@ -285,7 +284,7 @@ public class UwuhManager {
             return;
         }
         
-        // ✅ STEP 5: Panggil writeModuleConfig dengan fileTime
+        // ✅ Panggil writeModuleConfig dengan fileTime
         boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent, fileTime);
         
         if (success) {
