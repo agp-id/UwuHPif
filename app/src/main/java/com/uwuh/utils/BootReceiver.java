@@ -30,10 +30,13 @@ public class BootReceiver extends BroadcastReceiver {
             boolean isAuto = !sp.getBoolean("manual", false);
 
             new Thread(() -> {
+                // 1. Copy fallback dari raw jika file belum pernah ada di storage
                 applyFallback(directBootContext);
 
+                // 2. Lakukan sync ke framework (otomatis di-skip oleh Hash Checker jika isi file tidak berubah)
                 UwuhManager.syncAllToFramework(directBootContext, !isAuto);
 
+                // 3. Cek update online jika mode otomatis aktif
                 if (isAuto) {
                     checkUpdateOnline(directBootContext, sp);
                 }
@@ -50,16 +53,27 @@ public class BootReceiver extends BroadcastReceiver {
     }
 
     private void checkUpdateOnline(Context context, SharedPreferences sp) {
+    
         try {
             String newKb = fetch(URL_KB);
             String newPif = fetch(URL_PIF);
 
-            if (newKb != null && !newKb.isEmpty() && !newKb.equals(UwuhManager.readFile(UwuhManager.KB_PATH))) {
-                UwuhManager.writeAndSync(context, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
+            // Cek dan update Keybox jika konten online berbeda
+            if (newKb != null && !newKb.isEmpty()) {
+                String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH).replaceAll("\r\n", "\n").trim();
+                String fetchedKb = newKb.replaceAll("\r\n", "\n").trim();
+                if (!fetchedKb.equals(currentKb)) {
+                    UwuhManager.writeAndSync(context, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, fetchedKb);
+                }
             }
 
-            if (newPif != null && !newPif.isEmpty() && !newPif.equals(UwuhManager.readFile(UwuhManager.PIF_PATH))) {
-                UwuhManager.writeAndSync(context, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
+            // Cek dan update PIF jika konten online berbeda
+            if (newPif != null && !newPif.isEmpty()) {
+                String currentPif = UwuhManager.readFile(UwuhManager.PIF_PATH).replaceAll("\r\n", "\n").trim();
+                String fetchedPif = newPif.replaceAll("\r\n", "\n").trim();
+                if (!fetchedPif.equals(currentPif)) {
+                    UwuhManager.writeAndSync(context, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, fetchedPif);
+                }
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
@@ -73,10 +87,12 @@ public class BootReceiver extends BroadcastReceiver {
     private String fetch(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection c = (HttpURLConnection) url.openConnection();
-        c.setConnectTimeout(8000); c.setReadTimeout(8000);
+        c.setConnectTimeout(8000); 
+        c.setReadTimeout(8000);
         if (c.getResponseCode() != 200) return null;
         BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
-        StringBuilder sb = new StringBuilder(); String line;
+        StringBuilder sb = new StringBuilder(); 
+        String line;
         while ((line = r.readLine()) != null) sb.append(line).append("\n");
         r.close();
         return sb.toString().trim();
