@@ -45,6 +45,8 @@ public class UwuhManager {
     public static final String PROP_GAMEPROPS  = "persist.sys.uwuh.utils.gameprops";
     public static final String PROP_THERMALS   = "persist.sys.uwuh.utils.perapp_thermals";
     public static final String PROP_AUTO_UPDATE = "persist.sys.uwuh.utils.auto_update";
+    public static final String PROP_GPHOTOS    = "persist.sys.uwuh.utils.gphotos";
+    public static final String PROP_NETFLIX    = "persist.sys.uwuh.utils.netflix";
 
     private static final String FRAMEWORK_ENTRY_CLASS = "com.android.internal.util.danda.OemPortsUtils";
 
@@ -97,6 +99,14 @@ public class UwuhManager {
 
     public static boolean isCustomMode() {
         return getPropBoolean(PROP_USE_CUSTOM, false);
+    }
+
+    public static boolean isGPhotosEnabled() {
+        return getPropBoolean(PROP_GPHOTOS, false);
+    }
+
+    public static boolean isNetflixEnabled() {
+        return getPropBoolean(PROP_NETFLIX, false);
     }
 
     // ========================================================================
@@ -242,11 +252,9 @@ public class UwuhManager {
             return;
         }
         
-        // ✅ Baca lastModified file
         long fileTime = file.lastModified();
         String currentVersion = getProp(getVersionProp(moduleKey), "0");
         
-        // ✅ Bandingkan dengan version prop
         if (String.valueOf(fileTime).equals(currentVersion)) {
             appendLog("Skip " + moduleKey + ": Version match (" + fileTime + ")");
             return;
@@ -254,14 +262,12 @@ public class UwuhManager {
         
         appendLog("Version mismatch for " + moduleKey + ": current=" + currentVersion + ", file=" + fileTime);
         
-        // ✅ Version berbeda → baca file
         String rawContent = readFile(actualPath);
         if (rawContent.isEmpty()) {
             appendLog("File empty for " + moduleKey + ", skipping");
             return;
         }
         
-        // ✅ Validasi
         boolean isValid = false;
         switch (moduleKey) {
             case MODULE_KEYBOX:
@@ -284,7 +290,6 @@ public class UwuhManager {
             return;
         }
         
-        // ✅ Panggil writeModuleConfig dengan fileTime
         boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent, fileTime);
         
         if (success) {
@@ -377,10 +382,6 @@ public class UwuhManager {
             }
         }
     }
-
-    // ========================================================================
-    // FORCE SYNC (untuk reset)
-    // ========================================================================
 
     public static boolean forceSyncToFramework(Context context, String moduleKey, String filePath) {
         File file = new File(filePath);
