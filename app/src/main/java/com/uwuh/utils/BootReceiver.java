@@ -3,7 +3,6 @@ package com.uwuh.utils;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -40,9 +39,6 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
         
-        Context directBootContext = context.createDeviceProtectedStorageContext();
-        SharedPreferences sp = directBootContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
-        
         boolean autoUpdateEnabled = UwuhManager.isAutoUpdateEnabled();
         boolean useCustom = UwuhManager.isCustomMode();
         
@@ -66,9 +62,9 @@ public class BootReceiver extends BroadcastReceiver {
             try {
                 UwuhManager.appendLog("[BOOT] Boot processing started (auto-update enabled)");
                 
-                applyFallback(directBootContext);
-                UwuhManager.syncAllToFramework(directBootContext, false);
-                checkUpdateOnline(directBootContext, sp);
+                applyFallback(context);
+                UwuhManager.syncAllToFramework(context, false);
+                checkUpdateOnline(context);
                 
                 UwuhManager.appendLog("[BOOT] Boot processing completed");
                 sBootProcessed = true;
@@ -94,22 +90,18 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
-    private void checkUpdateOnline(Context context, SharedPreferences sp) {
+    private void checkUpdateOnline(Context context) {
         try {
             UwuhManager.appendLog("[BOOT] Checking online updates...");
             
             String newKb = fetchWithRetry(URL_KB, MAX_RETRIES);
             String newPif = fetchWithRetry(URL_PIF, MAX_RETRIES);
 
-            boolean kbUpdated = false;
-            boolean pifUpdated = false;
-
             if (newKb != null && !newKb.isEmpty() && UwuhManager.isValidKeybox(newKb)) {
                 String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH)
                         .replaceAll("\r\n", "\n").trim();
                 if (!newKb.equals(currentKb)) {
                     UwuhManager.writeAndSync(context, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
-                    kbUpdated = true;
                     UwuhManager.appendLog("[BOOT] Keybox updated from server");
                 }
             } else {
@@ -127,7 +119,6 @@ public class BootReceiver extends BroadcastReceiver {
                         .replaceAll("\r\n", "\n").trim();
                 if (!newPif.equals(currentPif)) {
                     UwuhManager.writeAndSync(context, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
-                    pifUpdated = true;
                     UwuhManager.appendLog("[BOOT] PIF updated from server");
                 }
             } else {
@@ -139,27 +130,6 @@ public class BootReceiver extends BroadcastReceiver {
                     UwuhManager.appendLog("[BOOT] PIF: Invalid format");
                 }
             }
-
-            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-            SharedPreferences.Editor editor = sp.edit();
-            
-            if (kbUpdated || pifUpdated) {
-                String details = "";
-                if (kbUpdated) details += "Keybox updated\n";
-                if (pifUpdated) details += "PIF updated\n";
-                editor.putString("last_update", date);
-                editor.putString("update_status", "SUCCESS");
-                editor.putString("update_details", details);
-                editor.putString("update_available", "false");
-                UwuhManager.appendLog("[BOOT] Update applied: " + details);
-            } else {
-                editor.putString("last_update", date);
-                editor.putString("update_status", "UP_TO_DATE");
-                editor.putString("update_details", "All files are up to date");
-                editor.putString("update_available", "false");
-                UwuhManager.appendLog("[BOOT] No updates needed");
-            }
-            editor.apply();
             
         } catch (Exception e) {
             Log.e(TAG, "[BOOT] Online update check failed", e);
