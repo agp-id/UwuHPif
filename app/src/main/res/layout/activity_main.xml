@@ -44,17 +44,17 @@
                 android:textSize="14sp"
                 android:visibility="gone" />
 
-            <!-- 3. Manual Mode -->
+            <!-- 3. Custom Mode -->
             <Switch
-                android:id="@+id/switchManual"
+                android:id="@+id/switchCustom"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Manual Mode (Use Custom Files)"
+                android:text="Custom Mode (Use Custom Files)"
                 android:textSize="16sp" />
 
             <LinearLayout
-                android:id="@+id/panelManual"
+                android:id="@+id/panelCustom"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -104,15 +104,15 @@
                     android:textSize="12sp" />
 
                 <Button
-                    android:id="@+id/btnApplyManual"
+                    android:id="@+id/btnApplyCustom"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Apply Manual PIF"
+                    android:text="Apply Custom PIF"
                     android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- 4. Auto-Update Toggle (HANYA jika Manual Mode OFF) -->
+            <!-- 4. Auto-Update Toggle (HANYA jika Custom Mode OFF) -->
             <LinearLayout
                 android:id="@+id/panelAutoUpdate"
                 android:layout_width="match_parent"
@@ -132,7 +132,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="Check & download updates at boot"
+                    android:text="Check and download updates at boot"
                     android:textSize="11sp"
                     android:textColor="#888888" />
             </LinearLayout>
@@ -162,13 +162,13 @@
                 android:textColor="#AAAAAA"
                 android:visibility="gone" />
 
-            <!-- 5. Check Update Button (Manual Check) -->
+            <!-- 5. Check Update Button -->
             <Button
                 android:id="@+id/btnCheckUpdate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Check Update (Notify Only)"
+                android:text="Check &amp; Apply Update"
                 android:textSize="14sp" />
 
             <!-- Garis Pemisah -->
@@ -259,7 +259,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layoutMarginTop="16dp"
+                android:layout_marginTop="16dp"
                 android:layout_marginBottom="12dp"
                 android:background="#FFFFFF" />
 
