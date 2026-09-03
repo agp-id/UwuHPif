@@ -16,9 +16,10 @@ import java.util.Locale;
 
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "UwuhBoot";
+    private static boolean sBootProcessed = false;
 
-    private static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
-    private static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
+    public static final String URL_KB = "https://raw.githubusercontent.com/user/repo/main/keybox.xml";
+    public static final String URL_PIF = "https://raw.githubusercontent.com/user/repo/main/pif.prop";
     
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 2000;
@@ -28,31 +29,58 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (Intent.ACTION_BOOT_COMPLETED.equals(action) || Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
-            
-            Context directBootContext = context.createDeviceProtectedStorageContext();
-            SharedPreferences sp = directBootContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
-            boolean isAuto = !sp.getBoolean("manual", false);
-
-            new Thread(() -> {
-                try {
-                    // 1. Copy fallback dari raw jika file belum ada
-                    applyFallback(directBootContext);
-
-                    // 2. Sync ke framework (di-skip oleh Hash Checker jika file tidak berubah)
-                    UwuhManager.syncAllToFramework(directBootContext, !isAuto);
-
-                    // 3. Cek update online jika mode otomatis aktif
-                    if (isAuto) {
-                        checkUpdateOnline(directBootContext, sp);
-                    }
-                    
-                    Log.d(TAG, "Boot processing completed successfully");
-                } catch (Exception e) {
-                    Log.e(TAG, "Boot processing failed", e);
-                }
-            }).start();
+        
+        if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && 
+            !Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(action)) {
+            return;
         }
+        
+        if (sBootProcessed) {
+            Log.d(TAG, "[BOOT] Already processed, skipping");
+            return;
+        }
+        
+        Context directBootContext = context.createDeviceProtectedStorageContext();
+        SharedPreferences sp = directBootContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
+        
+        boolean autoUpdateEnabled = UwuhManager.isAutoUpdateEnabled();
+        boolean useCustom = UwuhManager.isCustomMode();
+        
+        if (!autoUpdateEnabled) {
+            String msg = "[BOOT] Auto-update disabled, skipping";
+            Log.d(TAG, msg);
+            UwuhManager.appendLog(msg);
+            sBootProcessed = true;
+            return;
+        }
+        
+        if (useCustom) {
+            String msg = "[BOOT] Custom mode enabled, skipping auto-update";
+            Log.d(TAG, msg);
+            UwuhManager.appendLog(msg);
+            sBootProcessed = true;
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                UwuhManager.clearLog();
+                UwuhManager.appendLog("[BOOT] ===== NEW BOOT SESSION =====");
+                UwuhManager.appendLog("[BOOT] Boot processing started (auto-update enabled)");
+                
+                applyFallback(directBootContext);
+                UwuhManager.syncAllToFramework(directBootContext, false);
+                checkUpdateOnline(directBootContext, sp);
+                
+                UwuhManager.appendLog("[BOOT] Boot processing completed");
+                sBootProcessed = true;
+                
+            } catch (Exception e) {
+                Log.e(TAG, "[BOOT] Boot processing failed", e);
+                UwuhManager.appendLog("[BOOT] Boot processing failed: " + e.getMessage());
+                sBootProcessed = true;
+            }
+        }).start();
     }
 
     private void applyFallback(Context context) {
@@ -61,185 +89,86 @@ public class BootReceiver extends BroadcastReceiver {
             UwuhManager.copyRawIfNotExist(context, R.raw.default_pif, UwuhManager.PIF_PATH, UwuhManager.MODULE_PIF);
             UwuhManager.copyRawIfNotExist(context, R.raw.default_gameprops, UwuhManager.GAMEPROPS_PATH, UwuhManager.MODULE_GAMEPROPS);
             UwuhManager.copyRawIfNotExist(context, R.raw.default_thermals, UwuhManager.THERMALS_PATH, UwuhManager.MODULE_THERMALS);
-            Log.d(TAG, "Fallback files applied (if needed)");
+            UwuhManager.appendLog("[BOOT] Fallback files applied (if needed)");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to apply fallback", e);
+            Log.e(TAG, "[BOOT] Failed to apply fallback", e);
+            UwuhManager.appendLog("[BOOT] Failed to apply fallback: " + e.getMessage());
         }
     }
 
     private void checkUpdateOnline(Context context, SharedPreferences sp) {
-        boolean allSuccess = true;
-        StringBuilder statusLog = new StringBuilder();
-        StringBuilder errors = new StringBuilder();
+        boolean hasUpdate = false;
+        StringBuilder updateInfo = new StringBuilder();
         
         try {
-            Log.d(TAG, "Starting online update check...");
+            UwuhManager.appendLog("[BOOT] Checking online updates...");
             
             String newKb = fetchWithRetry(URL_KB, MAX_RETRIES);
-            UpdateResult kbResult = processKeyboxUpdate(context, newKb);
-            allSuccess = allSuccess && kbResult.success;
-            statusLog.append("Keybox: ").append(kbResult.message).append("\n");
-            if (!kbResult.success && kbResult.error != null) {
-                errors.append("Keybox: ").append(kbResult.error).append("\n");
+            String newPif = fetchWithRetry(URL_PIF, MAX_RETRIES);
+
+            if (newKb != null && !newKb.isEmpty() && UwuhManager.isValidKeybox(newKb)) {
+                String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH)
+                        .replaceAll("\r\n", "\n").trim();
+                if (!newKb.equals(currentKb)) {
+                    hasUpdate = true;
+                    updateInfo.append("Keybox: New version available");
+                }
+            } else {
+                if (newKb == null) {
+                    UwuhManager.appendLog("[BOOT] Keybox: Download failed");
+                } else if (newKb.isEmpty()) {
+                    UwuhManager.appendLog("[BOOT] Keybox: Empty content from server");
+                } else {
+                    UwuhManager.appendLog("[BOOT] Keybox: Invalid format");
+                }
             }
 
-            String newPif = fetchWithRetry(URL_PIF, MAX_RETRIES);
-            UpdateResult pifResult = processPifUpdate(context, newPif);
-            allSuccess = allSuccess && pifResult.success;
-            statusLog.append("PIF: ").append(pifResult.message).append("\n");
-            if (!pifResult.success && pifResult.error != null) {
-                errors.append("PIF: ").append(pifResult.error).append("\n");
+            if (newPif != null && !newPif.isEmpty() && UwuhManager.isValidPif(newPif)) {
+                String currentPif = UwuhManager.readFile(UwuhManager.PIF_PATH)
+                        .replaceAll("\r\n", "\n").trim();
+                if (!newPif.equals(currentPif)) {
+                    hasUpdate = true;
+                    updateInfo.append(updateInfo.length() > 0 ? "\n" : "")
+                             .append("PIF: New version available");
+                }
+            } else {
+                if (newPif == null) {
+                    UwuhManager.appendLog("[BOOT] PIF: Download failed");
+                } else if (newPif.isEmpty()) {
+                    UwuhManager.appendLog("[BOOT] PIF: Empty content from server");
+                } else {
+                    UwuhManager.appendLog("[BOOT] PIF: Invalid format");
+                }
             }
 
             String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
             SharedPreferences.Editor editor = sp.edit();
             
-            if (allSuccess) {
+            if (hasUpdate) {
                 editor.putString("last_update", date);
-                editor.putString("update_status", "SUCCESS");
-                editor.putString("update_details", statusLog.toString());
-                Log.d(TAG, "Online update completed successfully:\n" + statusLog.toString());
+                editor.putString("update_status", "UPDATE_AVAILABLE");
+                editor.putString("update_details", updateInfo.toString());
+                editor.putString("update_available", "true");
+                UwuhManager.appendLog("[BOOT] Updates available: " + updateInfo.toString());
             } else {
-                editor.putString("last_update", "FAILED: " + date);
-                editor.putString("update_status", "FAILED");
-                editor.putString("update_details", errors.toString());
-                Log.w(TAG, "Online update completed with errors:\n" + errors.toString());
+                editor.putString("last_update", date);
+                editor.putString("update_status", "UP_TO_DATE");
+                editor.putString("update_details", "All files are up to date");
+                editor.putString("update_available", "false");
+                UwuhManager.appendLog("[BOOT] No updates available");
             }
             editor.apply();
-
+            
         } catch (Exception e) {
-            Log.e(TAG, "Fatal error during online update", e);
-            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+            Log.e(TAG, "[BOOT] Online update check failed", e);
+            UwuhManager.appendLog("[BOOT] Update check failed: " + e.getMessage());
             sp.edit()
-                .putString("last_update", "ERROR: " + date)
+                .putString("last_update", "ERROR: " + new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date()))
                 .putString("update_status", "ERROR")
-                .putString("update_details", "Fatal error: " + e.getMessage())
+                .putString("update_details", "Check failed: " + e.getMessage())
+                .putString("update_available", "false")
                 .apply();
         }
-    }
-
-    private UpdateResult processKeyboxUpdate(Context context, String newContent) {
-        UpdateResult result = new UpdateResult();
-        
-        try {
-            if (newContent == null) {
-                result.success = false;
-                result.message = "Download failed - SKIPPED";
-                result.error = "Connection error";
-                return result;
-            }
-            
-            if (newContent.isEmpty()) {
-                result.success = false;
-                result.message = "Empty file - SKIPPED";
-                result.error = "Empty content";
-                return result;
-            }
-            
-            // ✅ Validasi di aplikasi
-            if (!UwuhManager.isValidKeybox(newContent)) {
-                result.success = false;
-                result.message = "Invalid XML format - SKIPPED";
-                result.error = "Invalid XML";
-                return result;
-            }
-            
-            String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH)
-                    .replaceAll("\r\n", "\n")
-                    .trim();
-            
-            if (newContent.equals(currentKb)) {
-                result.success = true;
-                result.message = "Already up-to-date";
-                return result;
-            }
-            
-            // ✅ writeAndSync akan validasi + set enable/disable
-            boolean writeSuccess = UwuhManager.writeAndSync(
-                context, 
-                UwuhManager.MODULE_KEYBOX, 
-                UwuhManager.KB_PATH, 
-                newContent
-            );
-            
-            if (writeSuccess) {
-                result.success = true;
-                result.message = "Updated successfully";
-            } else {
-                result.success = false;
-                result.message = "Write failed";
-                result.error = "Failed to write";
-            }
-            
-        } catch (Exception e) {
-            result.success = false;
-            result.message = "Error - SKIPPED";
-            result.error = e.getMessage();
-        }
-        
-        return result;
-    }
-
-    private UpdateResult processPifUpdate(Context context, String newContent) {
-        UpdateResult result = new UpdateResult();
-        
-        try {
-            if (newContent == null) {
-                result.success = false;
-                result.message = "Download failed - SKIPPED";
-                result.error = "Connection error";
-                return result;
-            }
-            
-            if (newContent.isEmpty()) {
-                result.success = false;
-                result.message = "Empty file - SKIPPED";
-                result.error = "Empty content";
-                return result;
-            }
-            
-            // ✅ Validasi di aplikasi
-            if (!UwuhManager.isValidPif(newContent)) {
-                result.success = false;
-                result.message = "Invalid PIF format - SKIPPED";
-                result.error = "Invalid format";
-                return result;
-            }
-            
-            String currentPif = UwuhManager.readFile(UwuhManager.PIF_PATH)
-                    .replaceAll("\r\n", "\n")
-                    .trim();
-            
-            if (newContent.equals(currentPif)) {
-                result.success = true;
-                result.message = "Already up-to-date";
-                return result;
-            }
-            
-            // ✅ writeAndSync akan validasi + set enable/disable
-            boolean writeSuccess = UwuhManager.writeAndSync(
-                context, 
-                UwuhManager.MODULE_PIF, 
-                UwuhManager.PIF_PATH, 
-                newContent
-            );
-            
-            if (writeSuccess) {
-                result.success = true;
-                result.message = "Updated successfully";
-            } else {
-                result.success = false;
-                result.message = "Write failed";
-                result.error = "Failed to write";
-            }
-            
-        } catch (Exception e) {
-            result.success = false;
-            result.message = "Error - SKIPPED";
-            result.error = e.getMessage();
-        }
-        
-        return result;
     }
 
     private String fetchWithRetry(String urlStr, int maxRetries) {
@@ -248,15 +177,13 @@ public class BootReceiver extends BroadcastReceiver {
         
         while (attempt < maxRetries) {
             try {
-                Log.d(TAG, "Fetch attempt " + (attempt + 1) + "/" + maxRetries);
                 String result = fetch(urlStr);
                 if (result != null) {
-                    Log.d(TAG, "Fetch successful (size: " + result.length() + " bytes)");
                     return result;
                 }
             } catch (Exception e) {
                 lastException = e;
-                Log.w(TAG, "Fetch attempt " + (attempt + 1) + " failed", e);
+                Log.w(TAG, "[BOOT] Fetch attempt " + (attempt + 1) + " failed", e);
             }
             
             attempt++;
@@ -271,7 +198,7 @@ public class BootReceiver extends BroadcastReceiver {
             }
         }
         
-        Log.e(TAG, "All " + maxRetries + " attempts failed", lastException);
+        Log.e(TAG, "[BOOT] All " + maxRetries + " attempts failed", lastException);
         return null;
     }
 
@@ -289,13 +216,13 @@ public class BootReceiver extends BroadcastReceiver {
             
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                Log.w(TAG, "Non-200 response: " + responseCode);
+                Log.w(TAG, "[BOOT] Non-200 response: " + responseCode);
                 return null;
             }
             
             int contentLength = connection.getContentLength();
             if (contentLength == 0) {
-                Log.w(TAG, "Content length is 0 (empty file)");
+                Log.w(TAG, "[BOOT] Content length is 0 (empty file)");
                 return "";
             }
             
@@ -311,11 +238,5 @@ public class BootReceiver extends BroadcastReceiver {
             if (reader != null) try { reader.close(); } catch (Exception ignored) {}
             if (connection != null) try { connection.disconnect(); } catch (Exception ignored) {}
         }
-    }
-
-    private static class UpdateResult {
-        boolean success = false;
-        String message = "";
-        String error = null;
     }
 }
