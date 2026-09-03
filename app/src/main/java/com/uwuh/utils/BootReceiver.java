@@ -34,6 +34,7 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
         
+        // ✅ HANYA 1x saat boot
         if (sBootProcessed) {
             Log.d(TAG, "[BOOT] Already processed, skipping");
             return;
@@ -42,6 +43,7 @@ public class BootReceiver extends BroadcastReceiver {
         boolean autoUpdateEnabled = UwuhManager.isAutoUpdateEnabled();
         boolean useCustom = UwuhManager.isCustomMode();
         
+        // ✅ Jika custom mode, skip
         if (useCustom) {
             String msg = "[BOOT] Custom mode enabled, skipping auto-update";
             Log.d(TAG, msg);
@@ -50,6 +52,7 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
         
+        // ✅ Auto-update hanya berjalan jika enabled
         if (!autoUpdateEnabled) {
             String msg = "[BOOT] Auto-update disabled, skipping";
             Log.d(TAG, msg);
@@ -64,7 +67,7 @@ public class BootReceiver extends BroadcastReceiver {
                 
                 applyFallback(context);
                 UwuhManager.syncAllToFramework(context, false);
-                checkUpdateOnline(context);
+                checkAndApplyUpdateOnline(context);
                 
                 UwuhManager.appendLog("[BOOT] Boot processing completed");
                 sBootProcessed = true;
@@ -90,9 +93,9 @@ public class BootReceiver extends BroadcastReceiver {
         }
     }
 
-    private void checkUpdateOnline(Context context) {
+    private void checkAndApplyUpdateOnline(Context context) {
         try {
-            UwuhManager.appendLog("[BOOT] Checking online updates...");
+            UwuhManager.appendLog("[BOOT] Checking and applying updates...");
             
             String newKb = fetchWithRetry(URL_KB, MAX_RETRIES);
             String newPif = fetchWithRetry(URL_PIF, MAX_RETRIES);
@@ -132,8 +135,8 @@ public class BootReceiver extends BroadcastReceiver {
             }
             
         } catch (Exception e) {
-            Log.e(TAG, "[BOOT] Online update check failed", e);
-            UwuhManager.appendLog("[BOOT] Update check failed: " + e.getMessage());
+            Log.e(TAG, "[BOOT] Online update failed", e);
+            UwuhManager.appendLog("[BOOT] Update failed: " + e.getMessage());
         }
     }
 
