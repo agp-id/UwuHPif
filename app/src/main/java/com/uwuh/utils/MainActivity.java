@@ -154,4 +154,382 @@ public class MainActivity extends Activity implements GamePropsThermalController
         });
 
         switchGPhotos.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            UwuhManager.setProp(UwuhManager.PROP
+            UwuhManager.setProp(UwuhManager.PROP_GPHOTOS, String.valueOf(isChecked));
+            UwuhManager.appendLog("Google Photos unlimited set to: " + isChecked);
+            refreshLog();
+        });
+
+        switchNetflix.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_NETFLIX, String.valueOf(isChecked));
+            UwuhManager.appendLog("Netflix spoof set to: " + isChecked);
+            refreshLog();
+        });
+
+        switchGameProps.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, String.valueOf(isChecked));
+            panelGamePropsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            UwuhManager.appendLog("GameProps prop set to: " + isChecked);
+            refreshLog();
+        });
+
+        switchThermals.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_THERMALS, String.valueOf(isChecked));
+            panelThermalsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            UwuhManager.appendLog("Thermals prop set to: " + isChecked);
+            refreshLog();
+        });
+
+        btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
+        btnPickPIF.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
+
+        btnApplyCustom.setOnClickListener(v -> {
+            String content = etPifEditor.getText().toString().trim();
+            if (content.isEmpty()) {
+                Toast.makeText(MainActivity.this, "PIF content cannot be empty", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            runAsyncWithLock(() -> {
+                boolean useCustom = switchCustom.isChecked();
+                String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
+                UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, content);
+            }, () -> {
+                Toast.makeText(MainActivity.this, "PIF applied successfully", Toast.LENGTH_SHORT).show();
+                loadPifContentToEditText();
+                refreshLog();
+                UwuhManager.appendLog("Custom PIF content applied & synced");
+                updateLastUpdate();
+            });
+        });
+
+        // ✅ Check & Apply Update - Tetap jalan meskipun auto-update disabled
+        btnCheckUpdate.setOnClickListener(v -> {
+            boolean useCustom = switchCustom.isChecked();
+            if (useCustom) {
+                Toast.makeText(MainActivity.this, "Custom mode: update not available", Toast.LENGTH_SHORT).show();
+                UwuhManager.appendLog("Update skipped: Custom mode enabled");
+                refreshLog();
+                return;
+            }
+            
+            runAsyncWithLock(() -> {
+                checkAndApplyUpdate();
+            }, () -> {
+                refreshLog();
+                updateLastUpdate();
+                UwuhManager.appendLog("Update check completed");
+                Toast.makeText(MainActivity.this, "Update check completed", Toast.LENGTH_SHORT).show();
+            });
+        });
+
+        btnGameProps.setOnClickListener(v -> 
+            GamePropsThermalController.showAppConfigDialog(MainActivity.this, true, MainActivity.this));
+
+        btnDevices.setOnClickListener(v -> 
+            GamePropsThermalController.showDevicesManagerDialog(MainActivity.this, MainActivity.this));
+
+        btnResetGameProps.setOnClickListener(v -> 
+            GamePropsThermalController.resetGameProps(MainActivity.this, MainActivity.this));
+
+        btnThermals.setOnClickListener(v -> 
+            GamePropsThermalController.showAppConfigDialog(MainActivity.this, false, MainActivity.this));
+
+        btnResetThermals.setOnClickListener(v -> 
+            GamePropsThermalController.resetThermals(MainActivity.this, MainActivity.this));
+
+        btnCopyLog.setOnClickListener(v -> {
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newPlainText("UwuhLog", tvLog.getText().toString());
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(MainActivity.this, "Log copied to clipboard", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void checkAndApplyUpdate() {
+        try {
+            UwuhManager.appendLog("Checking and applying updates...");
+            
+            String newKb = fetchUrl(BootReceiver.URL_KB);
+            String newPif = fetchUrl(BootReceiver.URL_PIF);
+
+            if (newKb != null && !newKb.isEmpty() && UwuhManager.isValidKeybox(newKb)) {
+                String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH)
+                        .replaceAll("\r\n", "\n").trim();
+                if (!newKb.equals(currentKb)) {
+                    UwuhManager.writeAndSync(this, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
+                    UwuhManager.appendLog("Keybox updated from server");
+                    Toast.makeText(this, "Keybox updated", Toast.LENGTH_SHORT).show();
+                } else {
+                    UwuhManager.appendLog("Keybox already up to date");
+                }
+            } else {
+                if (newKb == null) {
+                    UwuhManager.appendLog("Keybox: Download failed");
+                    Toast.makeText(this, "Keybox: Download failed", Toast.LENGTH_SHORT).show();
+                } else if (newKb.isEmpty()) {
+                    UwuhManager.appendLog("Keybox: Empty content from server");
+                } else {
+                    UwuhManager.appendLog("Keybox: Invalid format");
+                }
+            }
+
+            if (newPif != null && !newPif.isEmpty() && UwuhManager.isValidPif(newPif)) {
+                String currentPif = UwuhManager.readFile(UwuhManager.PIF_PATH)
+                        .replaceAll("\r\n", "\n").trim();
+                if (!newPif.equals(currentPif)) {
+                    UwuhManager.writeAndSync(this, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
+                    UwuhManager.appendLog("PIF updated from server");
+                    Toast.makeText(this, "PIF updated", Toast.LENGTH_SHORT).show();
+                } else {
+                    UwuhManager.appendLog("PIF already up to date");
+                }
+            } else {
+                if (newPif == null) {
+                    UwuhManager.appendLog("PIF: Download failed");
+                    Toast.makeText(this, "PIF: Download failed", Toast.LENGTH_SHORT).show();
+                } else if (newPif.isEmpty()) {
+                    UwuhManager.appendLog("PIF: Empty content from server");
+                } else {
+                    UwuhManager.appendLog("PIF: Invalid format");
+                }
+            }
+            
+        } catch (Exception e) {
+            UwuhManager.appendLog("Update check failed: " + e.getMessage());
+            Log.e(TAG, "Update check failed", e);
+            Toast.makeText(this, "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String fetchUrl(String urlStr) {
+        try {
+            URL url = new URL(urlStr);
+            HttpURLConnection c = (HttpURLConnection) url.openConnection();
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(8000);
+            c.setRequestMethod("GET");
+            c.setRequestProperty("User-Agent", "Uwuh-Android/1.0");
+            
+            if (c.getResponseCode() != 200) return null;
+            
+            int contentLength = c.getContentLength();
+            if (contentLength == 0) return "";
+            
+            BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            r.close();
+            return sb.toString().trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Override
+    public void log(String msg) {
+        runOnUiThread(() -> {
+            UwuhManager.appendLog(msg);
+            refreshLog();
+        });
+    }
+
+    private void refreshLog() {
+        runOnUiThread(() -> {
+            String content = UwuhManager.getLogContent();
+            tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
+        });
+    }
+
+    private void loadLogContent() {
+        String content = UwuhManager.getLogContent();
+        tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
+    }
+
+    private void updateLastUpdate() {
+        String kbPath = UwuhManager.KB_PATH;
+        File file = new File(kbPath);
+        if (file.exists() && file.length() > 0) {
+            long lastModified = file.lastModified();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault());
+            tvLastUpdate.setText("Last update: " + sdf.format(new Date(lastModified)));
+        } else {
+            tvLastUpdate.setText("Last update: -");
+        }
+    }
+
+    private void updateUiState() {
+        boolean useBootloader = UwuhManager.getPropBoolean(UwuhManager.PROP_BOOTLOADER, true);
+        boolean usePif = UwuhManager.getPropBoolean(UwuhManager.PROP_PIF, true);
+        boolean useFinsky = UwuhManager.getPropBoolean(UwuhManager.PROP_FINSKY, false);
+        boolean useCustom = UwuhManager.getPropBoolean(UwuhManager.PROP_USE_CUSTOM, false);
+        boolean autoUpdate = UwuhManager.getPropBoolean(UwuhManager.PROP_AUTO_UPDATE, true);
+        boolean gPhotos = UwuhManager.getPropBoolean(UwuhManager.PROP_GPHOTOS, false);
+        boolean netflix = UwuhManager.getPropBoolean(UwuhManager.PROP_NETFLIX, false);
+        boolean useGameProps = UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false);
+        boolean useThermals = UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false);
+
+        // Set semua switch
+        switchBootloader.setChecked(useBootloader);
+        switchPIF.setChecked(usePif);
+        switchFinsky.setChecked(useFinsky);
+        switchCustom.setChecked(useCustom);
+        switchAutoUpdate.setChecked(autoUpdate);
+        switchGPhotos.setChecked(gPhotos);
+        switchNetflix.setChecked(netflix);
+        switchGameProps.setChecked(useGameProps);
+        switchThermals.setChecked(useThermals);
+
+        // Visibility
+        switchFinsky.setVisibility(usePif ? View.VISIBLE : View.GONE);
+        panelGamePropsBtn.setVisibility(useGameProps ? View.VISIBLE : View.GONE);
+        panelThermalsBtn.setVisibility(useThermals ? View.VISIBLE : View.GONE);
+
+        if (useCustom) {
+            panelAutoUpdate.setVisibility(View.GONE);
+            panelCustom.setVisibility(View.VISIBLE);
+            btnCheckUpdate.setVisibility(View.GONE);
+            tvLastUpdate.setVisibility(View.GONE);
+        } else {
+            panelAutoUpdate.setVisibility(View.VISIBLE);
+            panelCustom.setVisibility(View.GONE);
+            btnCheckUpdate.setVisibility(View.VISIBLE);
+            tvLastUpdate.setVisibility(View.VISIBLE);
+            
+            if (autoUpdate) {
+                tvAutoUpdateInfo.setText("Auto-update enabled - will check at boot");
+                tvAutoUpdateInfo.setTextColor(Color.GREEN);
+            } else {
+                tvAutoUpdateInfo.setText("Auto-update disabled - manual check only");
+                tvAutoUpdateInfo.setTextColor(Color.RED);
+            }
+            
+            updateLastUpdate();
+        }
+
+        refreshFileMetadataUI();
+        loadPifContentToEditText();
+    }
+
+    private void refreshFileMetadataUI() {
+        boolean useCustom = switchCustom.isChecked();
+        String kbPath = useCustom && new File(UwuhManager.CUST_KB_PATH).exists()
+                ? UwuhManager.CUST_KB_PATH
+                : UwuhManager.KB_PATH;
+
+        File kbFile = new File(kbPath);
+        if (kbFile.exists() && kbFile.length() > 0) {
+            long lastModified = kbFile.lastModified();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault());
+            tvKeyboxLastApply.setText("Last apply: " + sdf.format(new Date(lastModified)));
+        } else {
+            tvKeyboxLastApply.setText("Last apply: -");
+        }
+
+        tvPifLastApply.setVisibility(View.GONE);
+    }
+
+    private void loadPifContentToEditText() {
+        boolean useCustom = switchCustom.isChecked();
+        String pifPath = useCustom && new File(UwuhManager.CUST_PIF_PATH).exists()
+                ? UwuhManager.CUST_PIF_PATH
+                : UwuhManager.PIF_PATH;
+
+        String content = UwuhManager.readFile(pifPath);
+        etPifEditor.setText(content);
+    }
+
+    private void openFilePicker(String mimeType, int requestCode) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType(mimeType);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(Intent.createChooser(intent, "Select File"), requestCode);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            Uri uri = data.getData();
+
+            runAsyncWithLock(() -> {
+                try {
+                    InputStream inputStream = getContentResolver().openInputStream(uri);
+                    if (inputStream == null) return;
+
+                    byte[] buffer = new byte[inputStream.available()];
+                    int bytesRead = inputStream.read(buffer);
+                    inputStream.close();
+
+                    if (bytesRead > 0) {
+                        String fileContent = new String(buffer, 0, bytesRead).trim();
+
+                        if (requestCode == REQ_PICK_KEYBOX) {
+                            String targetPath = switchCustom.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
+                            UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_KEYBOX, targetPath, fileContent);
+                        } else if (requestCode == REQ_PICK_PIF) {
+                            String targetPath = switchCustom.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
+                            UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, fileContent);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }, () -> {
+                Toast.makeText(MainActivity.this, "File written and synced successfully", Toast.LENGTH_SHORT).show();
+                refreshFileMetadataUI();
+                loadPifContentToEditText();
+                refreshLog();
+                updateLastUpdate();
+                UwuhManager.appendLog("Custom file imported & synced to framework");
+            });
+        }
+    }
+
+    private void setUiEnabled(boolean enabled) {
+        switchBootloader.setEnabled(enabled);
+        switchPIF.setEnabled(enabled);
+        switchFinsky.setEnabled(enabled);
+        switchCustom.setEnabled(enabled);
+        switchAutoUpdate.setEnabled(enabled);
+        switchGPhotos.setEnabled(enabled);
+        switchNetflix.setEnabled(enabled);
+        switchGameProps.setEnabled(enabled);
+        switchThermals.setEnabled(enabled);
+
+        btnPickKeybox.setEnabled(enabled);
+        btnPickPIF.setEnabled(enabled);
+        btnApplyCustom.setEnabled(enabled);
+        btnCheckUpdate.setEnabled(enabled);
+        btnCopyLog.setEnabled(enabled);
+
+        btnGameProps.setEnabled(enabled);
+        btnDevices.setEnabled(enabled);
+        btnResetGameProps.setEnabled(enabled);
+        btnThermals.setEnabled(enabled);
+        btnResetThermals.setEnabled(enabled);
+
+        etPifEditor.setEnabled(enabled);
+    }
+
+    private void runAsyncWithLock(Runnable backgroundTask, Runnable onComplete) {
+        setUiEnabled(false);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                backgroundTask.run();
+            } finally {
+                mainHandler.post(() -> {
+                    setUiEnabled(true);
+                    if (onComplete != null) {
+                        onComplete.run();
+                    }
+                });
+            }
+        });
+    }
+}
