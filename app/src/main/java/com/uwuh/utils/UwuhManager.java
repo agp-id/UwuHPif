@@ -16,8 +16,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 
 public class UwuhManager {
@@ -30,6 +33,7 @@ public class UwuhManager {
     public static final String CUST_PIF_PATH = DIR_PATH + "cust_pif.prop";
     public static final String GAMEPROPS_PATH = DIR_PATH + "gameprops.json";
     public static final String THERMALS_PATH = DIR_PATH + "per_app_thermals.json";
+    public static final String LOG_PATH = DIR_PATH + "uwuh.log";
 
     public static final String MODULE_KEYBOX = "k";
     public static final String MODULE_PIF = "p";
@@ -42,6 +46,7 @@ public class UwuhManager {
     public static final String PROP_USE_CUSTOM = "persist.sys.uwuh.utils.use_custom";
     public static final String PROP_GAMEPROPS  = "persist.sys.uwuh.utils.gameprops";
     public static final String PROP_THERMALS   = "persist.sys.uwuh.utils.perapp_thermals";
+    public static final String PROP_AUTO_UPDATE = "persist.sys.uwuh.utils.auto_update";
 
     private static final String FRAMEWORK_ENTRY_CLASS = "com.android.internal.util.danda.OemPortsUtils";
     private static final String PREF_HASHES = "uwuh_file_hashes";
@@ -85,13 +90,18 @@ public class UwuhManager {
         }
     }
 
+    public static boolean isAutoUpdateEnabled() {
+        return getPropBoolean(PROP_AUTO_UPDATE, true);
+    }
+
+    public static boolean isCustomMode() {
+        return getPropBoolean(PROP_USE_CUSTOM, false);
+    }
+
     // ========================================================================
-    // VALIDASI (DI APLIKASI, BUKAN FRAMEWORK)
+    // VALIDASI
     // ========================================================================
 
-    /**
-     * Validasi format GameProps JSON
-     */
     public static boolean isValidGameProps(String content) {
         if (content == null || content.trim().isEmpty()) return false;
         try {
@@ -120,9 +130,6 @@ public class UwuhManager {
         }
     }
 
-    /**
-     * Validasi format Thermals JSON
-     */
     public static boolean isValidThermals(String content) {
         if (content == null || content.trim().isEmpty()) return false;
         try {
@@ -147,18 +154,12 @@ public class UwuhManager {
         }
     }
 
-    /**
-     * Validasi format Keybox XML
-     */
     public static boolean isValidKeybox(String content) {
         if (content == null || content.trim().isEmpty()) return false;
         return content.contains("<Key") && content.contains("</Key>") 
                 && (content.contains("<PrivateKey") || content.contains("</PrivateKey>"));
     }
 
-    /**
-     * Validasi format PIF Prop
-     */
     public static boolean isValidPif(String content) {
         if (content == null || content.trim().isEmpty()) return false;
         String[] lines = content.split("\n");
@@ -211,33 +212,78 @@ public class UwuhManager {
         return !currentHash.equals(lastSyncedHash);
     }
 
-    public static boolean isValidFile(String filePath) {
-        File file = new File(filePath);
-        return file.exists() && file.length() > 0;
+    // ========================================================================
+    // LOGGING
+    // ========================================================================
+
+    public static void appendLog(String message) {
+        try {
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
+            String logEntry = "[" + timestamp + "] " + message + "\n";
+            
+            File logFile = new File(LOG_PATH);
+            File dir = logFile.getParentFile();
+            if (dir != null && !dir.exists()) {
+                dir.mkdirs();
+            }
+            
+            String existing = readFile(LOG_PATH);
+            String newContent = logEntry + existing;
+            
+            // Batasi ukuran log (max 500 lines)
+            String[] lines = newContent.split("\n");
+            if (lines.length > 500) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < 500; i++) {
+                    sb.append(lines[i]).append("\n");
+                }
+                newContent = sb.toString();
+            }
+            
+            writeFile(LOG_PATH, newContent);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to append log", e);
+        }
+    }
+
+    public static String getLogContent() {
+        return readFile(LOG_PATH);
+    }
+
+    public static void clearLog() {
+        writeFile(LOG_PATH, "");
     }
 
     // ========================================================================
-    // SYNC KE FRAMEWORK (DENGAN VALIDASI)
+    // SYNC KE FRAMEWORK
     // ========================================================================
 
-    /**
-     * Sync ke framework dengan hash checking + validasi
-     * ✅ Jika file valid → enable feature + write chunk
-     * ❌ Jika file invalid → disable feature + clear chunk
-     */
     public static synchronized void syncToFramework(Context context, String moduleKey, String filePath) {
-        File file = new File(filePath);
+        boolean useCustom = isCustomMode();
+        String actualPath = filePath;
+        
+        if (moduleKey.equals(MODULE_KEYBOX) || moduleKey.equals(MODULE_PIF)) {
+            if (useCustom) {
+                String customPath = moduleKey.equals(MODULE_KEYBOX) ? CUST_KB_PATH : CUST_PIF_PATH;
+                if (new File(customPath).exists() && new File(customPath).length() > 0) {
+                    actualPath = customPath;
+                    Log.d(TAG, "Using custom file for " + moduleKey + ": " + actualPath);
+                }
+            }
+        }
+        
+        File file = new File(actualPath);
         Context dpContext = context.createDeviceProtectedStorageContext();
         SharedPreferences sp = dpContext.getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
 
-        // Jika file tidak ada → clear config + disable
         if (!file.exists() || file.length() == 0) {
             if (sp.contains(moduleKey)) {
                 invokeFrameworkClearConfig(moduleKey);
                 sp.edit().remove(moduleKey).apply();
-                Log.d(TAG, "Cleared config for: " + moduleKey);
+                String msg = "Cleared config for: " + moduleKey;
+                Log.d(TAG, msg);
+                appendLog(msg);
             }
-            // ✅ Disable feature di aplikasi
             if (moduleKey.equals(MODULE_GAMEPROPS)) {
                 setProp(PROP_GAMEPROPS, "false");
             } else if (moduleKey.equals(MODULE_THERMALS)) {
@@ -246,7 +292,7 @@ public class UwuhManager {
             return;
         }
 
-        String rawContent = readFile(filePath);
+        String rawContent = readFile(actualPath);
         if (rawContent.isEmpty()) {
             if (moduleKey.equals(MODULE_GAMEPROPS)) {
                 setProp(PROP_GAMEPROPS, "false");
@@ -256,7 +302,6 @@ public class UwuhManager {
             return;
         }
 
-        // ✅ Validasi konten di APLIKASI
         boolean isValid = false;
         switch (moduleKey) {
             case MODULE_GAMEPROPS:
@@ -273,7 +318,6 @@ public class UwuhManager {
                 break;
         }
 
-        // ❌ Jika tidak valid → clear chunk + disable
         if (!isValid) {
             invokeFrameworkClearConfig(moduleKey);
             sp.edit().remove(moduleKey).apply();
@@ -282,18 +326,18 @@ public class UwuhManager {
             } else if (moduleKey.equals(MODULE_THERMALS)) {
                 setProp(PROP_THERMALS, "false");
             }
-            Log.d(TAG, "Cleared invalid " + moduleKey + " chunk");
+            String msg = "Cleared invalid " + moduleKey + " chunk";
+            Log.d(TAG, msg);
+            appendLog(msg);
             return;
         }
 
-        // ✅ Jika valid → enable feature
         if (moduleKey.equals(MODULE_GAMEPROPS)) {
             setProp(PROP_GAMEPROPS, "true");
         } else if (moduleKey.equals(MODULE_THERMALS)) {
             setProp(PROP_THERMALS, "true");
         }
 
-        // ✅ Hash checking
         String currentHash = calculateHash(rawContent);
         String lastSyncedHash = sp.getString(moduleKey, "");
 
@@ -301,18 +345,21 @@ public class UwuhManager {
             boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
             if (success) {
                 sp.edit().putString(moduleKey, currentHash).apply();
-                Log.d(TAG, "Chunk synced for: " + moduleKey + " (Hash Updated)");
+                String msg = "Chunk synced for: " + moduleKey + " (using: " + actualPath + ")";
+                Log.d(TAG, msg);
+                appendLog(msg);
             } else {
-                Log.e(TAG, "Failed to sync: " + moduleKey);
+                String msg = "Failed to sync: " + moduleKey;
+                Log.e(TAG, msg);
+                appendLog(msg);
             }
         } else {
-            Log.d(TAG, "Skip syncing " + moduleKey + ": Content has not changed.");
+            String msg = "Skip syncing " + moduleKey + ": Content has not changed (using: " + actualPath + ")";
+            Log.d(TAG, msg);
+            appendLog(msg);
         }
     }
 
-    /**
-     * FORCE sync (paksa update) - KHUSUS untuk GameProps & Thermals reset!
-     */
     public static boolean forceSyncToFramework(Context context, String moduleKey, String filePath) {
         File file = new File(filePath);
         if (!file.exists() || file.length() == 0) {
@@ -328,7 +375,6 @@ public class UwuhManager {
         String rawContent = readFile(filePath);
         if (rawContent.isEmpty()) return false;
         
-        // ✅ Validasi
         boolean isValid = false;
         switch (moduleKey) {
             case MODULE_GAMEPROPS:
@@ -355,7 +401,6 @@ public class UwuhManager {
             return false;
         }
         
-        // ✅ FORCE: langsung panggil writeModuleConfig()
         boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
         if (success) {
             String currentHash = calculateHash(rawContent);
@@ -368,35 +413,56 @@ public class UwuhManager {
             } else if (moduleKey.equals(MODULE_THERMALS)) {
                 setProp(PROP_THERMALS, "true");
             }
-            Log.d(TAG, "FORCE synced for: " + moduleKey);
+            String msg = "FORCE synced for: " + moduleKey;
+            Log.d(TAG, msg);
+            appendLog(msg);
         }
         return success;
     }
 
     public static void syncAllToFramework(Context context, boolean useCustom) {
-        syncToFramework(context, MODULE_KEYBOX, useCustom && new File(CUST_KB_PATH).exists() ? CUST_KB_PATH : KB_PATH);
-        syncToFramework(context, MODULE_PIF, useCustom && new File(CUST_PIF_PATH).exists() ? CUST_PIF_PATH : PIF_PATH);
+        String msg = "syncAllToFramework: useCustom=" + useCustom;
+        Log.d(TAG, msg);
+        appendLog(msg);
+        
+        if (useCustom) {
+            boolean hasCustomKb = new File(CUST_KB_PATH).exists() && new File(CUST_KB_PATH).length() > 0;
+            boolean hasCustomPif = new File(CUST_PIF_PATH).exists() && new File(CUST_PIF_PATH).length() > 0;
+            
+            if (hasCustomKb) {
+                syncToFramework(context, MODULE_KEYBOX, CUST_KB_PATH);
+            } else {
+                appendLog("Custom keybox not found, using default");
+                syncToFramework(context, MODULE_KEYBOX, KB_PATH);
+            }
+            
+            if (hasCustomPif) {
+                syncToFramework(context, MODULE_PIF, CUST_PIF_PATH);
+            } else {
+                appendLog("Custom PIF not found, using default");
+                syncToFramework(context, MODULE_PIF, PIF_PATH);
+            }
+        } else {
+            syncToFramework(context, MODULE_KEYBOX, KB_PATH);
+            syncToFramework(context, MODULE_PIF, PIF_PATH);
+        }
+        
         syncToFramework(context, MODULE_GAMEPROPS, GAMEPROPS_PATH);
         syncToFramework(context, MODULE_THERMALS, THERMALS_PATH);
     }
 
     // ========================================================================
-    // WRITE & SYNC (DENGAN VALIDASI)
+    // WRITE & SYNC
     // ========================================================================
 
-    /**
-     * Write file, validasi, dan sync ke framework
-     * ✅ Jika file valid → enable feature + write chunk
-     * ❌ Jika file invalid → disable feature + clear chunk
-     */
     public static boolean writeAndSync(Context context, String moduleKey, String path, String content) {
-        // 1. Tulis file ke disk
         if (!writeFile(path, content)) {
-            Log.e(TAG, "Failed to write file: " + path);
+            String msg = "Failed to write file: " + path;
+            Log.e(TAG, msg);
+            appendLog(msg);
             return false;
         }
         
-        // 2. Validasi konten berdasarkan module
         boolean isValid = false;
         switch (moduleKey) {
             case MODULE_GAMEPROPS:
@@ -413,28 +479,24 @@ public class UwuhManager {
                 break;
         }
         
-        // 3. Set enable/disable prop di aplikasi
         if (moduleKey.equals(MODULE_GAMEPROPS)) {
             setProp(PROP_GAMEPROPS, String.valueOf(isValid));
-            Log.d(TAG, "GameProps " + (isValid ? "ENABLED" : "DISABLED"));
+            appendLog("GameProps " + (isValid ? "ENABLED" : "DISABLED"));
         } else if (moduleKey.equals(MODULE_THERMALS)) {
             setProp(PROP_THERMALS, String.valueOf(isValid));
-            Log.d(TAG, "Thermals " + (isValid ? "ENABLED" : "DISABLED"));
+            appendLog("Thermals " + (isValid ? "ENABLED" : "DISABLED"));
         }
         
-        // 4. Jika tidak valid, clear chunk
         if (!isValid) {
             invokeFrameworkClearConfig(moduleKey);
             SharedPreferences sp = context.createDeviceProtectedStorageContext()
                                           .getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
             sp.edit().remove(moduleKey).apply();
-            Log.d(TAG, "Cleared chunk for invalid " + moduleKey);
+            appendLog("Cleared chunk for invalid " + moduleKey);
             return false;
         }
         
-        // 5. Hanya sync jika valid
         syncToFramework(context, moduleKey, path);
-        
         return true;
     }
 
@@ -444,7 +506,7 @@ public class UwuhManager {
             String content = readRawRes(ctx, rawResId);
             if (!content.isEmpty()) {
                 writeAndSync(ctx, moduleKey, targetPath, content);
-                Log.d(TAG, "Copied default raw resource to: " + targetPath);
+                appendLog("Copied default raw resource to: " + targetPath);
             }
         }
     }
@@ -458,7 +520,6 @@ public class UwuhManager {
             Class<?> clazz = Class.forName(FRAMEWORK_ENTRY_CLASS, true, getFrameworkClassLoader());
             Method method = clazz.getMethod("writeModuleConfig", String.class, String.class);
             method.invoke(null, moduleKey, rawContent);
-            Log.d(TAG, "Successfully invoked OemPortsUtils.writeModuleConfig for: " + moduleKey);
             return true;
         } catch (Throwable t) {
             Log.e(TAG, "Reflection OemPortsUtils write error for module " + moduleKey, t);
@@ -471,7 +532,6 @@ public class UwuhManager {
             Class<?> clazz = Class.forName(FRAMEWORK_ENTRY_CLASS, true, getFrameworkClassLoader());
             Method method = clazz.getMethod("clearModuleConfig", String.class);
             method.invoke(null, moduleKey);
-            Log.d(TAG, "Successfully invoked OemPortsUtils.clearModuleConfig for: " + moduleKey);
             return true;
         } catch (Throwable t) {
             Log.e(TAG, "Reflection OemPortsUtils clear error for module " + moduleKey, t);
