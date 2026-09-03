@@ -33,9 +33,9 @@ public class MainActivity extends Activity implements GamePropsThermalController
     private static final int REQ_PICK_PIF = 1002;
     private static final String TAG = "UwuhMain";
 
-    private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals, switchAutoUpdate;
-    private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn, panelAutoUpdate;
-    private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnCheckUpdate, btnCopyLog;
+    private Switch switchBootloader, switchPIF, switchFinsky, switchCustom, switchGameProps, switchThermals, switchAutoUpdate;
+    private LinearLayout panelCustom, panelGamePropsBtn, panelThermalsBtn, panelAutoUpdate;
+    private Button btnPickKeybox, btnPickPIF, btnApplyCustom, btnCheckUpdate, btnCopyLog;
     private Button btnGameProps, btnDevices, btnResetGameProps, btnThermals, btnResetThermals;
     private TextView tvKeyboxLastApply, tvPifLastApply, tvLastUpdate, tvLog, tvUpdateStatus, tvUpdateDetails, tvUpdateAvailable, tvAutoUpdateInfo;
     private EditText etPifEditor;
@@ -59,19 +59,19 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchBootloader = findViewById(R.id.switchBootloader);
         switchPIF = findViewById(R.id.switchPIF);
         switchFinsky = findViewById(R.id.switchFinsky);
-        switchManual = findViewById(R.id.switchManual);
+        switchCustom = findViewById(R.id.switchCustom);
         switchGameProps = findViewById(R.id.switchGameProps);
         switchThermals = findViewById(R.id.switchThermals);
         switchAutoUpdate = findViewById(R.id.switchAutoUpdate);
 
-        panelManual = findViewById(R.id.panelManual);
+        panelCustom = findViewById(R.id.panelCustom);
         panelGamePropsBtn = findViewById(R.id.panelGamePropsBtn);
         panelThermalsBtn = findViewById(R.id.panelThermalsBtn);
         panelAutoUpdate = findViewById(R.id.panelAutoUpdate);
 
         btnPickKeybox = findViewById(R.id.btnPickKeybox);
         btnPickPIF = findViewById(R.id.btnPickPIF);
-        btnApplyManual = findViewById(R.id.btnApplyManual);
+        btnApplyCustom = findViewById(R.id.btnApplyCustom);
         btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
@@ -113,7 +113,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
             refreshLog();
         });
 
-        switchManual.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        switchCustom.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_USE_CUSTOM, String.valueOf(isChecked));
             updateUiState();
 
@@ -158,7 +158,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
         btnPickPIF.setOnClickListener(v -> openFilePicker("*/*", REQ_PICK_PIF));
 
-        btnApplyManual.setOnClickListener(v -> {
+        btnApplyCustom.setOnClickListener(v -> {
             String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
                 Toast.makeText(MainActivity.this, "PIF content cannot be empty", Toast.LENGTH_SHORT).show();
@@ -166,33 +166,33 @@ public class MainActivity extends Activity implements GamePropsThermalController
             }
 
             runAsyncWithLock(() -> {
-                boolean useCustom = switchManual.isChecked();
+                boolean useCustom = switchCustom.isChecked();
                 String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                 UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, content);
             }, () -> {
                 Toast.makeText(MainActivity.this, "PIF applied successfully", Toast.LENGTH_SHORT).show();
                 loadPifContentToEditText();
                 refreshLog();
-                UwuhManager.appendLog("Manual PIF content applied & synced");
+                UwuhManager.appendLog("Custom PIF content applied & synced");
             });
         });
 
         btnCheckUpdate.setOnClickListener(v -> {
-            boolean useCustom = switchManual.isChecked();
+            boolean useCustom = switchCustom.isChecked();
             if (useCustom) {
-                Toast.makeText(MainActivity.this, "Custom mode: update check not available", Toast.LENGTH_SHORT).show();
-                UwuhManager.appendLog("Update check skipped: Custom mode enabled");
+                Toast.makeText(MainActivity.this, "Custom mode: update not available", Toast.LENGTH_SHORT).show();
+                UwuhManager.appendLog("Update skipped: Custom mode enabled");
                 refreshLog();
                 return;
             }
             
             runAsyncWithLock(() -> {
-                checkUpdateOnlineNotifyOnly();
+                checkUpdateOnline();
             }, () -> {
                 loadUpdateStatus();
                 checkForUpdateNotification();
                 refreshLog();
-                UwuhManager.appendLog("Update check completed (notify only)");
+                UwuhManager.appendLog("Update check completed");
                 Toast.makeText(MainActivity.this, "Update check completed", Toast.LENGTH_SHORT).show();
             });
         });
@@ -222,27 +222,23 @@ public class MainActivity extends Activity implements GamePropsThermalController
         });
     }
 
-    private void checkUpdateOnlineNotifyOnly() {
+    private void checkUpdateOnline() {
         try {
-            UwuhManager.appendLog("Checking for updates (notify only)...");
+            UwuhManager.appendLog("Checking for updates...");
             
             String newKb = fetchUrl(BootReceiver.URL_KB);
             String newPif = fetchUrl(BootReceiver.URL_PIF);
-            
-            Context dpContext = createDeviceProtectedStorageContext();
-            SharedPreferences sp = dpContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = sp.edit();
-            
-            boolean hasUpdate = false;
-            StringBuilder details = new StringBuilder();
-            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
-            
+
+            boolean kbUpdated = false;
+            boolean pifUpdated = false;
+
             if (newKb != null && !newKb.isEmpty() && UwuhManager.isValidKeybox(newKb)) {
                 String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH)
                         .replaceAll("\r\n", "\n").trim();
                 if (!newKb.equals(currentKb)) {
-                    hasUpdate = true;
-                    details.append("Keybox: New version available");
+                    UwuhManager.writeAndSync(this, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
+                    kbUpdated = true;
+                    UwuhManager.appendLog("Keybox updated from server");
                 }
             } else {
                 if (newKb == null) {
@@ -253,14 +249,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
                     UwuhManager.appendLog("Keybox: Invalid format");
                 }
             }
-            
+
             if (newPif != null && !newPif.isEmpty() && UwuhManager.isValidPif(newPif)) {
                 String currentPif = UwuhManager.readFile(UwuhManager.PIF_PATH)
                         .replaceAll("\r\n", "\n").trim();
                 if (!newPif.equals(currentPif)) {
-                    hasUpdate = true;
-                    details.append(details.length() > 0 ? "\n" : "")
-                           .append("PIF: New version available");
+                    UwuhManager.writeAndSync(this, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
+                    pifUpdated = true;
+                    UwuhManager.appendLog("PIF updated from server");
                 }
             } else {
                 if (newPif == null) {
@@ -271,19 +267,27 @@ public class MainActivity extends Activity implements GamePropsThermalController
                     UwuhManager.appendLog("PIF: Invalid format");
                 }
             }
+
+            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+            Context dpContext = createDeviceProtectedStorageContext();
+            SharedPreferences sp = dpContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sp.edit();
             
-            if (hasUpdate) {
+            if (kbUpdated || pifUpdated) {
+                String details = "";
+                if (kbUpdated) details += "Keybox updated\n";
+                if (pifUpdated) details += "PIF updated\n";
                 editor.putString("last_update", date);
-                editor.putString("update_status", "UPDATE_AVAILABLE");
-                editor.putString("update_details", details.toString());
-                editor.putString("update_available", "true");
-                UwuhManager.appendLog("Updates available: " + details.toString());
+                editor.putString("update_status", "SUCCESS");
+                editor.putString("update_details", details);
+                editor.putString("update_available", "false");
+                UwuhManager.appendLog("Update applied: " + details);
             } else {
                 editor.putString("last_update", date);
                 editor.putString("update_status", "UP_TO_DATE");
                 editor.putString("update_details", "All files are up to date");
                 editor.putString("update_available", "false");
-                UwuhManager.appendLog("No updates available");
+                UwuhManager.appendLog("No updates needed");
             }
             editor.apply();
             
@@ -291,8 +295,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
             UwuhManager.appendLog("Update check failed: " + e.getMessage());
             Log.e(TAG, "Update check failed", e);
         }
-        
-        refreshLog();
     }
 
     private String fetchUrl(String urlStr) {
@@ -301,11 +303,20 @@ public class MainActivity extends Activity implements GamePropsThermalController
             HttpURLConnection c = (HttpURLConnection) url.openConnection();
             c.setConnectTimeout(8000);
             c.setReadTimeout(8000);
+            c.setRequestMethod("GET");
+            c.setRequestProperty("User-Agent", "Uwuh-Android/1.0");
+            
             if (c.getResponseCode() != 200) return null;
+            
+            int contentLength = c.getContentLength();
+            if (contentLength == 0) return "";
+            
             BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
             StringBuilder sb = new StringBuilder();
             String line;
-            while ((line = r.readLine()) != null) sb.append(line).append("\n");
+            while ((line = r.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
             r.close();
             return sb.toString().trim();
         } catch (Exception e) {
@@ -361,7 +372,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchBootloader.setChecked(useBootloader);
         switchPIF.setChecked(usePif);
         switchFinsky.setChecked(useFinsky);
-        switchManual.setChecked(useCustom);
+        switchCustom.setChecked(useCustom);
         switchGameProps.setChecked(useGameProps);
         switchThermals.setChecked(useThermals);
         switchAutoUpdate.setChecked(autoUpdate);
@@ -372,10 +383,19 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
         if (useCustom) {
             panelAutoUpdate.setVisibility(View.GONE);
-            panelManual.setVisibility(View.VISIBLE);
+            panelCustom.setVisibility(View.VISIBLE);
+            btnCheckUpdate.setVisibility(View.GONE);
+            tvLastUpdate.setVisibility(View.GONE);
+            tvUpdateStatus.setVisibility(View.GONE);
+            tvUpdateDetails.setVisibility(View.GONE);
+            tvUpdateAvailable.setVisibility(View.GONE);
         } else {
             panelAutoUpdate.setVisibility(View.VISIBLE);
-            panelManual.setVisibility(View.GONE);
+            panelCustom.setVisibility(View.GONE);
+            btnCheckUpdate.setVisibility(View.VISIBLE);
+            tvLastUpdate.setVisibility(View.VISIBLE);
+            tvUpdateStatus.setVisibility(View.VISIBLE);
+            tvUpdateDetails.setVisibility(View.VISIBLE);
             
             if (autoUpdate) {
                 tvAutoUpdateInfo.setText("Auto-update enabled - will check at boot");
@@ -384,6 +404,8 @@ public class MainActivity extends Activity implements GamePropsThermalController
                 tvAutoUpdateInfo.setText("Auto-update disabled - manual check only");
                 tvAutoUpdateInfo.setTextColor(Color.RED);
             }
+            
+            checkForUpdateNotification();
         }
 
         refreshFileMetadataUI();
@@ -391,7 +413,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
     }
 
     private void refreshFileMetadataUI() {
-        boolean useCustom = switchManual.isChecked();
+        boolean useCustom = switchCustom.isChecked();
         String kbPath = useCustom && new File(UwuhManager.CUST_KB_PATH).exists()
                 ? UwuhManager.CUST_KB_PATH
                 : UwuhManager.KB_PATH;
@@ -409,7 +431,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
     }
 
     private void loadPifContentToEditText() {
-        boolean useCustom = switchManual.isChecked();
+        boolean useCustom = switchCustom.isChecked();
         String pifPath = useCustom && new File(UwuhManager.CUST_PIF_PATH).exists()
                 ? UwuhManager.CUST_PIF_PATH
                 : UwuhManager.PIF_PATH;
@@ -431,12 +453,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvUpdateDetails.setText(details);
         tvUpdateDetails.setVisibility(details.isEmpty() ? View.GONE : View.VISIBLE);
         
-        if ("UPDATE_AVAILABLE".equals(status)) {
-            tvUpdateStatus.setTextColor(Color.parseColor("#FFA500"));
-        } else if ("SUCCESS".equals(status) || "UP_TO_DATE".equals(status)) {
+        if ("SUCCESS".equals(status)) {
             tvUpdateStatus.setTextColor(Color.GREEN);
+        } else if ("UPDATE_AVAILABLE".equals(status)) {
+            tvUpdateStatus.setTextColor(Color.parseColor("#FFA500"));
         } else if ("FAILED".equals(status) || "ERROR".equals(status)) {
             tvUpdateStatus.setTextColor(Color.RED);
+        } else if ("UP_TO_DATE".equals(status)) {
+            tvUpdateStatus.setTextColor(Color.GREEN);
         } else {
             tvUpdateStatus.setTextColor(Color.GRAY);
         }
@@ -469,10 +493,10 @@ public class MainActivity extends Activity implements GamePropsThermalController
                         String fileContent = new String(buffer, 0, bytesRead).trim();
 
                         if (requestCode == REQ_PICK_KEYBOX) {
-                            String targetPath = switchManual.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
+                            String targetPath = switchCustom.isChecked() ? UwuhManager.CUST_KB_PATH : UwuhManager.KB_PATH;
                             UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_KEYBOX, targetPath, fileContent);
                         } else if (requestCode == REQ_PICK_PIF) {
-                            String targetPath = switchManual.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
+                            String targetPath = switchCustom.isChecked() ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                             UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, fileContent);
                         }
                     }
@@ -494,14 +518,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchBootloader.setEnabled(enabled);
         switchPIF.setEnabled(enabled);
         switchFinsky.setEnabled(enabled);
-        switchManual.setEnabled(enabled);
+        switchCustom.setEnabled(enabled);
         switchGameProps.setEnabled(enabled);
         switchThermals.setEnabled(enabled);
         switchAutoUpdate.setEnabled(enabled);
 
         btnPickKeybox.setEnabled(enabled);
         btnPickPIF.setEnabled(enabled);
-        btnApplyManual.setEnabled(enabled);
+        btnApplyCustom.setEnabled(enabled);
         btnCheckUpdate.setEnabled(enabled);
         btnCopyLog.setEnabled(enabled);
 
