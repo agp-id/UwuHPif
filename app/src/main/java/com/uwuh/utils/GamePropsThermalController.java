@@ -111,12 +111,15 @@ public class GamePropsThermalController {
         btnSave.setOnClickListener(v -> {
             boolean success = saveMapToJson(allApps, filePath, defaultOption, labelToKeyMap);
             if (success) {
-                // ✅ syncToFramework akan validasi + set enable/disable
                 UwuhManager.syncToFramework(context, moduleKey, filePath);
-                callback.log((isGameProps ? "GameProps" : "Thermals") + " config saved & synced");
-                Toast.makeText(context, "Saved & Synced!", Toast.LENGTH_SHORT).show();
+                String msg = (isGameProps ? "GameProps" : "Thermals") + " config saved & synced";
+                callback.log(msg);
+                UwuhManager.appendLog(msg);
+                Toast.makeText(context, "Saved & Synced", Toast.LENGTH_SHORT).show();
             } else {
-                callback.log("Save failed!");
+                String msg = "Save failed";
+                callback.log(msg);
+                UwuhManager.appendLog(msg);
             }
             dialog.dismiss();
         });
@@ -216,9 +219,11 @@ public class GamePropsThermalController {
                 if (isEdit && !devName.equals(name)) root.remove(devName);
                 root.put(name, devObj);
 
-                // ✅ writeAndSync akan validasi + set enable/disable
-                UwuhManager.writeAndSync(context, UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4));
-                callback.log("Device " + name + " saved & synced");
+                if (UwuhManager.writeAndSync(context, UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4))) {
+                    String msg = "Device " + name + " saved & synced";
+                    callback.log(msg);
+                    UwuhManager.appendLog(msg);
+                }
             } catch (Exception e) { e.printStackTrace(); }
             dialog.dismiss();
             if (onComplete != null) onComplete.run();
@@ -229,9 +234,10 @@ public class GamePropsThermalController {
                 JSONObject root = new JSONObject(UwuhManager.readFile(UwuhManager.GAMEPROPS_PATH));
                 if (root.has(devName)) {
                     root.remove(devName);
-                    // ✅ writeAndSync akan validasi + set enable/disable
                     UwuhManager.writeAndSync(context, UwuhManager.MODULE_GAMEPROPS, UwuhManager.GAMEPROPS_PATH, root.toString(4));
-                    callback.log("Device " + devName + " deleted");
+                    String msg = "Device " + devName + " deleted";
+                    callback.log(msg);
+                    UwuhManager.appendLog(msg);
                 }
             } catch (Exception e) { e.printStackTrace(); }
             dialog.dismiss();
@@ -241,49 +247,47 @@ public class GamePropsThermalController {
         dialog.show();
     }
 
-    /**
-     * Reset GameProps ke default
-     * ✅ FORCE sync - chunk & version PASTI berubah
-     */
     public static void resetGameProps(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_gameprops);
         if (!data.isEmpty()) {
             if (UwuhManager.writeFile(UwuhManager.GAMEPROPS_PATH, data)) {
-                // ✅ forceSyncToFramework akan validasi + set enable/disable
                 boolean success = UwuhManager.forceSyncToFramework(
                     context, 
                     UwuhManager.MODULE_GAMEPROPS, 
                     UwuhManager.GAMEPROPS_PATH
                 );
                 if (success) {
-                    callback.log("GameProps reset to default & forced sync");
-                    Toast.makeText(context, "GameProps Reset & Synced!", Toast.LENGTH_SHORT).show();
+                    String msg = "GameProps reset to default & forced sync";
+                    callback.log(msg);
+                    UwuhManager.appendLog(msg);
+                    Toast.makeText(context, "GameProps Reset & Synced", Toast.LENGTH_SHORT).show();
                 } else {
-                    callback.log("GameProps reset failed to sync!");
+                    String msg = "GameProps reset failed to sync";
+                    callback.log(msg);
+                    UwuhManager.appendLog(msg);
                 }
             }
         }
     }
 
-    /**
-     * Reset Thermals ke default
-     * ✅ FORCE sync - chunk & version PASTI berubah
-     */
     public static void resetThermals(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_thermals);
         if (!data.isEmpty()) {
             if (UwuhManager.writeFile(UwuhManager.THERMALS_PATH, data)) {
-                // ✅ forceSyncToFramework akan validasi + set enable/disable
                 boolean success = UwuhManager.forceSyncToFramework(
                     context, 
                     UwuhManager.MODULE_THERMALS, 
                     UwuhManager.THERMALS_PATH
                 );
                 if (success) {
-                    callback.log("Thermals reset to default & forced sync");
-                    Toast.makeText(context, "Thermals Reset & Synced!", Toast.LENGTH_SHORT).show();
+                    String msg = "Thermals reset to default & forced sync";
+                    callback.log(msg);
+                    UwuhManager.appendLog(msg);
+                    Toast.makeText(context, "Thermals Reset & Synced", Toast.LENGTH_SHORT).show();
                 } else {
-                    callback.log("Thermals reset failed to sync!");
+                    String msg = "Thermals reset failed to sync";
+                    callback.log(msg);
+                    UwuhManager.appendLog(msg);
                 }
             }
         }
