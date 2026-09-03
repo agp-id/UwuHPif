@@ -15,7 +15,6 @@ import java.io.FileReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -49,7 +48,6 @@ public class UwuhManager {
     public static final String PROP_AUTO_UPDATE = "persist.sys.uwuh.utils.auto_update";
 
     private static final String FRAMEWORK_ENTRY_CLASS = "com.android.internal.util.danda.OemPortsUtils";
-    private static final String PREF_HASHES = "uwuh_file_hashes";
 
     private static ClassLoader getFrameworkClassLoader() {
         try {
@@ -88,6 +86,10 @@ public class UwuhManager {
         } catch (Exception e) {
             Log.e(TAG, "Failed to set SystemProperty: " + key, e);
         }
+    }
+
+    public static String getVersionProp(String moduleKey) {
+        return "persist.sys." + moduleKey + "v";
     }
 
     public static boolean isAutoUpdateEnabled() {
@@ -175,44 +177,6 @@ public class UwuhManager {
     }
 
     // ========================================================================
-    // HASH CHECKING
-    // ========================================================================
-
-    private static String calculateHash(String content) {
-        if (content == null || content.isEmpty()) return "";
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(content.getBytes("UTF-8"));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    public static boolean needsSync(Context context, String moduleKey, String filePath) {
-        File file = new File(filePath);
-        if (!file.exists() || file.length() == 0) {
-            return false;
-        }
-        
-        String rawContent = readFile(filePath);
-        if (rawContent.isEmpty()) return false;
-        
-        String currentHash = calculateHash(rawContent);
-        SharedPreferences sp = context.createDeviceProtectedStorageContext()
-                                      .getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
-        String lastSyncedHash = sp.getString(moduleKey, "");
-        
-        return !currentHash.equals(lastSyncedHash);
-    }
-
-    // ========================================================================
     // LOGGING
     // ========================================================================
 
@@ -230,7 +194,6 @@ public class UwuhManager {
             String existing = readFile(LOG_PATH);
             String newContent = logEntry + existing;
             
-            // Batasi ukuran log (max 500 lines)
             String[] lines = newContent.split("\n");
             if (lines.length > 500) {
                 StringBuilder sb = new StringBuilder();
@@ -267,98 +230,158 @@ public class UwuhManager {
                 String customPath = moduleKey.equals(MODULE_KEYBOX) ? CUST_KB_PATH : CUST_PIF_PATH;
                 if (new File(customPath).exists() && new File(customPath).length() > 0) {
                     actualPath = customPath;
-                    Log.d(TAG, "Using custom file for " + moduleKey + ": " + actualPath);
+                    appendLog("Using custom file for " + moduleKey + ": " + actualPath);
                 }
             }
         }
         
         File file = new File(actualPath);
-        Context dpContext = context.createDeviceProtectedStorageContext();
-        SharedPreferences sp = dpContext.getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
-
+        
         if (!file.exists() || file.length() == 0) {
-            if (sp.contains(moduleKey)) {
-                invokeFrameworkClearConfig(moduleKey);
-                sp.edit().remove(moduleKey).apply();
-                String msg = "Cleared config for: " + moduleKey;
-                Log.d(TAG, msg);
-                appendLog(msg);
-            }
-            if (moduleKey.equals(MODULE_GAMEPROPS)) {
-                setProp(PROP_GAMEPROPS, "false");
-            } else if (moduleKey.equals(MODULE_THERMALS)) {
-                setProp(PROP_THERMALS, "false");
-            }
+            invokeFrameworkClearConfig(moduleKey);
+            appendLog("Cleared config for: " + moduleKey + " (file not found: " + actualPath + ")");
             return;
         }
-
+        
+        // ✅ STEP 1: Baca lastModified file
+        long fileTime = file.lastModified();
+        String currentVersion = getProp(getVersionProp(moduleKey), "0");
+        
+        // ✅ STEP 2: Bandingkan dengan version prop
+        if (String.valueOf(fileTime).equals(currentVersion)) {
+            appendLog("Skip " + moduleKey + ": Version match (" + fileTime + ")");
+            return;
+        }
+        
+        appendLog("Version mismatch for " + moduleKey + ": current=" + currentVersion + ", file=" + fileTime);
+        
+        // ✅ STEP 3: Version berbeda → baca file
         String rawContent = readFile(actualPath);
         if (rawContent.isEmpty()) {
-            if (moduleKey.equals(MODULE_GAMEPROPS)) {
-                setProp(PROP_GAMEPROPS, "false");
-            } else if (moduleKey.equals(MODULE_THERMALS)) {
-                setProp(PROP_THERMALS, "false");
-            }
+            appendLog("File empty for " + moduleKey + ", skipping");
             return;
         }
-
+        
+        // ✅ STEP 4: Validasi
         boolean isValid = false;
         switch (moduleKey) {
-            case MODULE_GAMEPROPS:
-                isValid = isValidGameProps(rawContent);
-                break;
-            case MODULE_THERMALS:
-                isValid = isValidThermals(rawContent);
-                break;
             case MODULE_KEYBOX:
                 isValid = isValidKeybox(rawContent);
                 break;
             case MODULE_PIF:
                 isValid = isValidPif(rawContent);
                 break;
+            case MODULE_GAMEPROPS:
+                isValid = isValidGameProps(rawContent);
+                break;
+            case MODULE_THERMALS:
+                isValid = isValidThermals(rawContent);
+                break;
         }
-
+        
         if (!isValid) {
             invokeFrameworkClearConfig(moduleKey);
-            sp.edit().remove(moduleKey).apply();
-            if (moduleKey.equals(MODULE_GAMEPROPS)) {
-                setProp(PROP_GAMEPROPS, "false");
-            } else if (moduleKey.equals(MODULE_THERMALS)) {
-                setProp(PROP_THERMALS, "false");
-            }
-            String msg = "Cleared invalid " + moduleKey + " chunk";
-            Log.d(TAG, msg);
-            appendLog(msg);
+            appendLog("Cleared invalid " + moduleKey + " chunk");
             return;
         }
-
-        if (moduleKey.equals(MODULE_GAMEPROPS)) {
-            setProp(PROP_GAMEPROPS, "true");
-        } else if (moduleKey.equals(MODULE_THERMALS)) {
-            setProp(PROP_THERMALS, "true");
-        }
-
-        String currentHash = calculateHash(rawContent);
-        String lastSyncedHash = sp.getString(moduleKey, "");
-
-        if (!currentHash.equals(lastSyncedHash)) {
-            boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
-            if (success) {
-                sp.edit().putString(moduleKey, currentHash).apply();
-                String msg = "Chunk synced for: " + moduleKey + " (using: " + actualPath + ")";
-                Log.d(TAG, msg);
-                appendLog(msg);
-            } else {
-                String msg = "Failed to sync: " + moduleKey;
-                Log.e(TAG, msg);
-                appendLog(msg);
-            }
+        
+        // ✅ STEP 5: Panggil writeModuleConfig dengan fileTime
+        boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent, fileTime);
+        
+        if (success) {
+            appendLog("Chunk updated for: " + moduleKey + " (version: " + fileTime + ")");
         } else {
-            String msg = "Skip syncing " + moduleKey + ": Content has not changed (using: " + actualPath + ")";
-            Log.d(TAG, msg);
-            appendLog(msg);
+            appendLog("Failed to update chunk for: " + moduleKey);
         }
     }
+
+    public static void syncAllToFramework(Context context, boolean useCustom) {
+        appendLog("syncAllToFramework: useCustom=" + useCustom);
+        
+        if (useCustom) {
+            boolean hasCustomKb = new File(CUST_KB_PATH).exists() && new File(CUST_KB_PATH).length() > 0;
+            boolean hasCustomPif = new File(CUST_PIF_PATH).exists() && new File(CUST_PIF_PATH).length() > 0;
+            
+            if (hasCustomKb) {
+                syncToFramework(context, MODULE_KEYBOX, CUST_KB_PATH);
+            } else {
+                appendLog("Custom keybox not found, using default");
+                syncToFramework(context, MODULE_KEYBOX, KB_PATH);
+            }
+            
+            if (hasCustomPif) {
+                syncToFramework(context, MODULE_PIF, CUST_PIF_PATH);
+            } else {
+                appendLog("Custom PIF not found, using default");
+                syncToFramework(context, MODULE_PIF, PIF_PATH);
+            }
+        } else {
+            syncToFramework(context, MODULE_KEYBOX, KB_PATH);
+            syncToFramework(context, MODULE_PIF, PIF_PATH);
+        }
+        
+        syncToFramework(context, MODULE_GAMEPROPS, GAMEPROPS_PATH);
+        syncToFramework(context, MODULE_THERMALS, THERMALS_PATH);
+    }
+
+    // ========================================================================
+    // WRITE & SYNC
+    // ========================================================================
+
+    public static boolean writeAndSync(Context context, String moduleKey, String path, String content) {
+        if (!writeFile(path, content)) {
+            appendLog("Failed to write file: " + path);
+            return false;
+        }
+        
+        boolean isValid = false;
+        switch (moduleKey) {
+            case MODULE_GAMEPROPS:
+                isValid = isValidGameProps(content);
+                break;
+            case MODULE_THERMALS:
+                isValid = isValidThermals(content);
+                break;
+            case MODULE_KEYBOX:
+                isValid = isValidKeybox(content);
+                break;
+            case MODULE_PIF:
+                isValid = isValidPif(content);
+                break;
+        }
+        
+        if (moduleKey.equals(MODULE_GAMEPROPS)) {
+            setProp(PROP_GAMEPROPS, String.valueOf(isValid));
+            appendLog("GameProps " + (isValid ? "ENABLED" : "DISABLED"));
+        } else if (moduleKey.equals(MODULE_THERMALS)) {
+            setProp(PROP_THERMALS, String.valueOf(isValid));
+            appendLog("Thermals " + (isValid ? "ENABLED" : "DISABLED"));
+        }
+        
+        if (!isValid) {
+            invokeFrameworkClearConfig(moduleKey);
+            appendLog("Cleared chunk for invalid " + moduleKey);
+            return false;
+        }
+        
+        syncToFramework(context, moduleKey, path);
+        return true;
+    }
+
+    public static void copyRawIfNotExist(Context ctx, int rawResId, String targetPath, String moduleKey) {
+        File file = new File(targetPath);
+        if (!file.exists() || file.length() == 0) {
+            String content = readRawRes(ctx, rawResId);
+            if (!content.isEmpty()) {
+                writeAndSync(ctx, moduleKey, targetPath, content);
+                appendLog("Copied default raw resource to: " + targetPath);
+            }
+        }
+    }
+
+    // ========================================================================
+    // FORCE SYNC (untuk reset)
+    // ========================================================================
 
     public static boolean forceSyncToFramework(Context context, String moduleKey, String filePath) {
         File file = new File(filePath);
@@ -401,128 +424,32 @@ public class UwuhManager {
             return false;
         }
         
-        boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent);
+        long fileTime = file.lastModified();
+        boolean success = invokeFrameworkWriteConfig(moduleKey, rawContent, fileTime);
+        
         if (success) {
-            String currentHash = calculateHash(rawContent);
-            SharedPreferences sp = context.createDeviceProtectedStorageContext()
-                                          .getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
-            sp.edit().putString(moduleKey, currentHash).apply();
-            
             if (moduleKey.equals(MODULE_GAMEPROPS)) {
                 setProp(PROP_GAMEPROPS, "true");
             } else if (moduleKey.equals(MODULE_THERMALS)) {
                 setProp(PROP_THERMALS, "true");
             }
-            String msg = "FORCE synced for: " + moduleKey;
-            Log.d(TAG, msg);
-            appendLog(msg);
+            appendLog("FORCE synced for: " + moduleKey + " (version: " + fileTime + ")");
         }
         return success;
-    }
-
-    public static void syncAllToFramework(Context context, boolean useCustom) {
-        String msg = "syncAllToFramework: useCustom=" + useCustom;
-        Log.d(TAG, msg);
-        appendLog(msg);
-        
-        if (useCustom) {
-            boolean hasCustomKb = new File(CUST_KB_PATH).exists() && new File(CUST_KB_PATH).length() > 0;
-            boolean hasCustomPif = new File(CUST_PIF_PATH).exists() && new File(CUST_PIF_PATH).length() > 0;
-            
-            if (hasCustomKb) {
-                syncToFramework(context, MODULE_KEYBOX, CUST_KB_PATH);
-            } else {
-                appendLog("Custom keybox not found, using default");
-                syncToFramework(context, MODULE_KEYBOX, KB_PATH);
-            }
-            
-            if (hasCustomPif) {
-                syncToFramework(context, MODULE_PIF, CUST_PIF_PATH);
-            } else {
-                appendLog("Custom PIF not found, using default");
-                syncToFramework(context, MODULE_PIF, PIF_PATH);
-            }
-        } else {
-            syncToFramework(context, MODULE_KEYBOX, KB_PATH);
-            syncToFramework(context, MODULE_PIF, PIF_PATH);
-        }
-        
-        syncToFramework(context, MODULE_GAMEPROPS, GAMEPROPS_PATH);
-        syncToFramework(context, MODULE_THERMALS, THERMALS_PATH);
-    }
-
-    // ========================================================================
-    // WRITE & SYNC
-    // ========================================================================
-
-    public static boolean writeAndSync(Context context, String moduleKey, String path, String content) {
-        if (!writeFile(path, content)) {
-            String msg = "Failed to write file: " + path;
-            Log.e(TAG, msg);
-            appendLog(msg);
-            return false;
-        }
-        
-        boolean isValid = false;
-        switch (moduleKey) {
-            case MODULE_GAMEPROPS:
-                isValid = isValidGameProps(content);
-                break;
-            case MODULE_THERMALS:
-                isValid = isValidThermals(content);
-                break;
-            case MODULE_KEYBOX:
-                isValid = isValidKeybox(content);
-                break;
-            case MODULE_PIF:
-                isValid = isValidPif(content);
-                break;
-        }
-        
-        if (moduleKey.equals(MODULE_GAMEPROPS)) {
-            setProp(PROP_GAMEPROPS, String.valueOf(isValid));
-            appendLog("GameProps " + (isValid ? "ENABLED" : "DISABLED"));
-        } else if (moduleKey.equals(MODULE_THERMALS)) {
-            setProp(PROP_THERMALS, String.valueOf(isValid));
-            appendLog("Thermals " + (isValid ? "ENABLED" : "DISABLED"));
-        }
-        
-        if (!isValid) {
-            invokeFrameworkClearConfig(moduleKey);
-            SharedPreferences sp = context.createDeviceProtectedStorageContext()
-                                          .getSharedPreferences(PREF_HASHES, Context.MODE_PRIVATE);
-            sp.edit().remove(moduleKey).apply();
-            appendLog("Cleared chunk for invalid " + moduleKey);
-            return false;
-        }
-        
-        syncToFramework(context, moduleKey, path);
-        return true;
-    }
-
-    public static void copyRawIfNotExist(Context ctx, int rawResId, String targetPath, String moduleKey) {
-        File file = new File(targetPath);
-        if (!file.exists() || file.length() == 0) {
-            String content = readRawRes(ctx, rawResId);
-            if (!content.isEmpty()) {
-                writeAndSync(ctx, moduleKey, targetPath, content);
-                appendLog("Copied default raw resource to: " + targetPath);
-            }
-        }
     }
 
     // ========================================================================
     // FRAMEWORK REFLECTION
     // ========================================================================
 
-    private static boolean invokeFrameworkWriteConfig(String moduleKey, String rawContent) {
+    private static boolean invokeFrameworkWriteConfig(String moduleKey, String rawContent, long fileTime) {
         try {
             Class<?> clazz = Class.forName(FRAMEWORK_ENTRY_CLASS, true, getFrameworkClassLoader());
-            Method method = clazz.getMethod("writeModuleConfig", String.class, String.class);
-            method.invoke(null, moduleKey, rawContent);
+            Method method = clazz.getMethod("writeModuleConfig", String.class, String.class, long.class);
+            method.invoke(null, moduleKey, rawContent, fileTime);
             return true;
         } catch (Throwable t) {
-            Log.e(TAG, "Reflection OemPortsUtils write error for module " + moduleKey, t);
+            Log.e(TAG, "Reflection write error for module " + moduleKey, t);
             return false;
         }
     }
@@ -534,7 +461,7 @@ public class UwuhManager {
             method.invoke(null, moduleKey);
             return true;
         } catch (Throwable t) {
-            Log.e(TAG, "Reflection OemPortsUtils clear error for module " + moduleKey, t);
+            Log.e(TAG, "Reflection clear error for module " + moduleKey, t);
             return false;
         }
     }
@@ -593,14 +520,5 @@ public class UwuhManager {
         } catch (Exception e) {
             return "";
         }
-    }
-
-    public static Map<String, Boolean> getSyncStatus(Context context) {
-        Map<String, Boolean> status = new HashMap<>();
-        status.put(MODULE_KEYBOX, needsSync(context, MODULE_KEYBOX, KB_PATH));
-        status.put(MODULE_PIF, needsSync(context, MODULE_PIF, PIF_PATH));
-        status.put(MODULE_GAMEPROPS, needsSync(context, MODULE_GAMEPROPS, GAMEPROPS_PATH));
-        status.put(MODULE_THERMALS, needsSync(context, MODULE_THERMALS, THERMALS_PATH));
-        return status;
     }
 }
