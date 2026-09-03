@@ -3,6 +3,7 @@ package com.uwuh.utils;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,8 +16,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -26,12 +31,13 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
     private static final int REQ_PICK_KEYBOX = 1001;
     private static final int REQ_PICK_PIF = 1002;
+    private static final String TAG = "UwuhMain";
 
-    private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals;
-    private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn;
-    private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnUpdate, btnCopyLog;
+    private Switch switchBootloader, switchPIF, switchFinsky, switchManual, switchGameProps, switchThermals, switchAutoUpdate;
+    private LinearLayout panelManual, panelGamePropsBtn, panelThermalsBtn, panelAutoUpdate;
+    private Button btnPickKeybox, btnPickPIF, btnApplyManual, btnCheckUpdate, btnCopyLog;
     private Button btnGameProps, btnDevices, btnResetGameProps, btnThermals, btnResetThermals;
-    private TextView tvKeyboxLastApply, tvPifLastApply, tvAutoStatus, tvLastUpdate, tvLog;
+    private TextView tvKeyboxLastApply, tvPifLastApply, tvLastUpdate, tvLog, tvUpdateStatus, tvUpdateDetails, tvUpdateAvailable, tvAutoUpdateInfo;
     private EditText etPifEditor;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -44,6 +50,9 @@ public class MainActivity extends Activity implements GamePropsThermalController
         initViews();
         setupListeners();
         updateUiState();
+        loadUpdateStatus();
+        checkForUpdateNotification();
+        loadLogContent();
     }
 
     private void initViews() {
@@ -53,15 +62,17 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchManual = findViewById(R.id.switchManual);
         switchGameProps = findViewById(R.id.switchGameProps);
         switchThermals = findViewById(R.id.switchThermals);
+        switchAutoUpdate = findViewById(R.id.switchAutoUpdate);
 
         panelManual = findViewById(R.id.panelManual);
         panelGamePropsBtn = findViewById(R.id.panelGamePropsBtn);
         panelThermalsBtn = findViewById(R.id.panelThermalsBtn);
+        panelAutoUpdate = findViewById(R.id.panelAutoUpdate);
 
         btnPickKeybox = findViewById(R.id.btnPickKeybox);
         btnPickPIF = findViewById(R.id.btnPickPIF);
         btnApplyManual = findViewById(R.id.btnApplyManual);
-        btnUpdate = findViewById(R.id.btnUpdate);
+        btnCheckUpdate = findViewById(R.id.btnCheckUpdate);
         btnCopyLog = findViewById(R.id.btnCopyLog);
 
         btnGameProps = findViewById(R.id.btnGameProps);
@@ -72,9 +83,12 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
         tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
         tvPifLastApply = findViewById(R.id.tvPifLastApply);
-        tvAutoStatus = findViewById(R.id.tvAutoStatus);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
         tvLog = findViewById(R.id.tvLog);
+        tvUpdateStatus = findViewById(R.id.tvUpdateStatus);
+        tvUpdateDetails = findViewById(R.id.tvUpdateDetails);
+        tvUpdateAvailable = findViewById(R.id.tvUpdateAvailable);
+        tvAutoUpdateInfo = findViewById(R.id.tvAutoUpdateInfo);
 
         etPifEditor = findViewById(R.id.etPifEditor);
     }
@@ -82,18 +96,21 @@ public class MainActivity extends Activity implements GamePropsThermalController
     private void setupListeners() {
         switchBootloader.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_BOOTLOADER, String.valueOf(isChecked));
-            appendLog("Bootloader prop set to: " + isChecked);
+            UwuhManager.appendLog("Bootloader prop set to: " + isChecked);
+            refreshLog();
         });
 
         switchPIF.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_PIF, String.valueOf(isChecked));
             switchFinsky.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            appendLog("PIF prop set to: " + isChecked);
+            UwuhManager.appendLog("PIF prop set to: " + isChecked);
+            refreshLog();
         });
 
         switchFinsky.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_FINSKY, String.valueOf(isChecked));
-            appendLog("Finsky prop set to: " + isChecked);
+            UwuhManager.appendLog("Finsky prop set to: " + isChecked);
+            refreshLog();
         });
 
         switchManual.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -102,19 +119,40 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
             runAsyncWithLock(() -> {
                 UwuhManager.syncAllToFramework(MainActivity.this, isChecked);
-            }, () -> appendLog("Custom Mode switched to: " + isChecked));
+            }, () -> {
+                UwuhManager.appendLog("Custom Mode switched to: " + isChecked + " (synced)");
+                refreshLog();
+                refreshFileMetadataUI();
+                loadPifContentToEditText();
+            });
+        });
+
+        switchAutoUpdate.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            UwuhManager.setProp(UwuhManager.PROP_AUTO_UPDATE, String.valueOf(isChecked));
+            UwuhManager.appendLog("Auto-Update set to: " + isChecked);
+            refreshLog();
+            
+            if (isChecked) {
+                tvAutoUpdateInfo.setText("Auto-update enabled - will check at boot");
+                tvAutoUpdateInfo.setTextColor(Color.GREEN);
+            } else {
+                tvAutoUpdateInfo.setText("Auto-update disabled - manual check only");
+                tvAutoUpdateInfo.setTextColor(Color.RED);
+            }
         });
 
         switchGameProps.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_GAMEPROPS, String.valueOf(isChecked));
             panelGamePropsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            appendLog("GameProps prop set to: " + isChecked);
+            UwuhManager.appendLog("GameProps prop set to: " + isChecked);
+            refreshLog();
         });
 
         switchThermals.setOnCheckedChangeListener((buttonView, isChecked) -> {
             UwuhManager.setProp(UwuhManager.PROP_THERMALS, String.valueOf(isChecked));
             panelThermalsBtn.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            appendLog("Thermals prop set to: " + isChecked);
+            UwuhManager.appendLog("Thermals prop set to: " + isChecked);
+            refreshLog();
         });
 
         btnPickKeybox.setOnClickListener(v -> openFilePicker("text/xml", REQ_PICK_KEYBOX));
@@ -123,7 +161,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         btnApplyManual.setOnClickListener(v -> {
             String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
-                Toast.makeText(MainActivity.this, "Konten PIF tidak boleh kosong!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "PIF content cannot be empty", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -132,20 +170,30 @@ public class MainActivity extends Activity implements GamePropsThermalController
                 String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                 UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, content);
             }, () -> {
-                Toast.makeText(MainActivity.this, "PIF berhasil diterapkan!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "PIF applied successfully", Toast.LENGTH_SHORT).show();
                 loadPifContentToEditText();
-                appendLog("Manual PIF content applied & chunked");
+                refreshLog();
+                UwuhManager.appendLog("Manual PIF content applied & synced");
             });
         });
 
-        btnUpdate.setOnClickListener(v -> {
+        btnCheckUpdate.setOnClickListener(v -> {
+            boolean useCustom = switchManual.isChecked();
+            if (useCustom) {
+                Toast.makeText(MainActivity.this, "Custom mode: update check not available", Toast.LENGTH_SHORT).show();
+                UwuhManager.appendLog("Update check skipped: Custom mode enabled");
+                refreshLog();
+                return;
+            }
+            
             runAsyncWithLock(() -> {
-                boolean useCustom = switchManual.isChecked();
-                UwuhManager.syncAllToFramework(MainActivity.this, useCustom);
+                checkUpdateOnlineNotifyOnly();
             }, () -> {
-                Toast.makeText(MainActivity.this, "Sync & Update Selesai!", Toast.LENGTH_SHORT).show();
-                refreshFileMetadataUI();
-                appendLog("Manual trigger sync completed");
+                loadUpdateStatus();
+                checkForUpdateNotification();
+                refreshLog();
+                UwuhManager.appendLog("Update check completed (notify only)");
+                Toast.makeText(MainActivity.this, "Update check completed", Toast.LENGTH_SHORT).show();
             });
         });
 
@@ -169,20 +217,136 @@ public class MainActivity extends Activity implements GamePropsThermalController
             android.content.ClipData clip = android.content.ClipData.newPlainText("UwuhLog", tvLog.getText().toString());
             if (clipboard != null) {
                 clipboard.setPrimaryClip(clip);
-                Toast.makeText(MainActivity.this, "Log disalin ke clipboard!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Log copied to clipboard", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    @Override
-    public void log(String msg) {
-        runOnUiThread(() -> appendLog(msg));
+    private void checkUpdateOnlineNotifyOnly() {
+        try {
+            UwuhManager.appendLog("Checking for updates (notify only)...");
+            
+            String newKb = fetchUrl(BootReceiver.URL_KB);
+            String newPif = fetchUrl(BootReceiver.URL_PIF);
+            
+            Context dpContext = createDeviceProtectedStorageContext();
+            SharedPreferences sp = dpContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sp.edit();
+            
+            boolean hasUpdate = false;
+            StringBuilder details = new StringBuilder();
+            String date = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.US).format(new Date());
+            
+            if (newKb != null && !newKb.isEmpty() && UwuhManager.isValidKeybox(newKb)) {
+                String currentKb = UwuhManager.readFile(UwuhManager.KB_PATH)
+                        .replaceAll("\r\n", "\n").trim();
+                if (!newKb.equals(currentKb)) {
+                    hasUpdate = true;
+                    details.append("Keybox: New version available");
+                }
+            } else {
+                if (newKb == null) {
+                    UwuhManager.appendLog("Keybox: Download failed");
+                } else if (newKb.isEmpty()) {
+                    UwuhManager.appendLog("Keybox: Empty content from server");
+                } else {
+                    UwuhManager.appendLog("Keybox: Invalid format");
+                }
+            }
+            
+            if (newPif != null && !newPif.isEmpty() && UwuhManager.isValidPif(newPif)) {
+                String currentPif = UwuhManager.readFile(UwuhManager.PIF_PATH)
+                        .replaceAll("\r\n", "\n").trim();
+                if (!newPif.equals(currentPif)) {
+                    hasUpdate = true;
+                    details.append(details.length() > 0 ? "\n" : "")
+                           .append("PIF: New version available");
+                }
+            } else {
+                if (newPif == null) {
+                    UwuhManager.appendLog("PIF: Download failed");
+                } else if (newPif.isEmpty()) {
+                    UwuhManager.appendLog("PIF: Empty content from server");
+                } else {
+                    UwuhManager.appendLog("PIF: Invalid format");
+                }
+            }
+            
+            if (hasUpdate) {
+                editor.putString("last_update", date);
+                editor.putString("update_status", "UPDATE_AVAILABLE");
+                editor.putString("update_details", details.toString());
+                editor.putString("update_available", "true");
+                UwuhManager.appendLog("Updates available: " + details.toString());
+            } else {
+                editor.putString("last_update", date);
+                editor.putString("update_status", "UP_TO_DATE");
+                editor.putString("update_details", "All files are up to date");
+                editor.putString("update_available", "false");
+                UwuhManager.appendLog("No updates available");
+            }
+            editor.apply();
+            
+        } catch (Exception e) {
+            UwuhManager.appendLog("Update check failed: " + e.getMessage());
+            Log.e(TAG, "Update check failed", e);
+        }
+        
+        refreshLog();
     }
 
-    private void appendLog(String msg) {
-        String time = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
-        String currentLog = tvLog.getText().toString();
-        tvLog.setText("[" + time + "] " + msg + "\n" + currentLog);
+    private String fetchUrl(String urlStr) {
+        try {
+            URL url = new URL(urlStr);
+            HttpURLConnection c = (HttpURLConnection) url.openConnection();
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(8000);
+            if (c.getResponseCode() != 200) return null;
+            BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line).append("\n");
+            r.close();
+            return sb.toString().trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void checkForUpdateNotification() {
+        Context dpContext = createDeviceProtectedStorageContext();
+        SharedPreferences sp = dpContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
+        
+        String updateAvailable = sp.getString("update_available", "false");
+        String details = sp.getString("update_details", "");
+        
+        if ("true".equals(updateAvailable) && !details.isEmpty()) {
+            tvUpdateAvailable.setVisibility(View.VISIBLE);
+            tvUpdateAvailable.setText("UPDATE AVAILABLE\n" + details);
+            tvUpdateAvailable.setTextColor(Color.parseColor("#FFA500"));
+        } else {
+            tvUpdateAvailable.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void log(String msg) {
+        runOnUiThread(() -> {
+            UwuhManager.appendLog(msg);
+            refreshLog();
+        });
+    }
+
+    private void refreshLog() {
+        runOnUiThread(() -> {
+            String content = UwuhManager.getLogContent();
+            tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
+        });
+    }
+
+    private void loadLogContent() {
+        String content = UwuhManager.getLogContent();
+        tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
     }
 
     private void updateUiState() {
@@ -192,6 +356,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         boolean useCustom = UwuhManager.getPropBoolean(UwuhManager.PROP_USE_CUSTOM, false);
         boolean useGameProps = UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false);
         boolean useThermals = UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false);
+        boolean autoUpdate = UwuhManager.getPropBoolean(UwuhManager.PROP_AUTO_UPDATE, true);
 
         switchBootloader.setChecked(useBootloader);
         switchPIF.setChecked(usePif);
@@ -199,21 +364,26 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchManual.setChecked(useCustom);
         switchGameProps.setChecked(useGameProps);
         switchThermals.setChecked(useThermals);
+        switchAutoUpdate.setChecked(autoUpdate);
 
         switchFinsky.setVisibility(usePif ? View.VISIBLE : View.GONE);
         panelGamePropsBtn.setVisibility(useGameProps ? View.VISIBLE : View.GONE);
         panelThermalsBtn.setVisibility(useThermals ? View.VISIBLE : View.GONE);
 
         if (useCustom) {
+            panelAutoUpdate.setVisibility(View.GONE);
             panelManual.setVisibility(View.VISIBLE);
-            tvAutoStatus.setVisibility(View.GONE);
-            tvLastUpdate.setVisibility(View.GONE);
-            btnUpdate.setVisibility(View.GONE);
         } else {
+            panelAutoUpdate.setVisibility(View.VISIBLE);
             panelManual.setVisibility(View.GONE);
-            tvAutoStatus.setVisibility(View.VISIBLE);
-            tvLastUpdate.setVisibility(View.VISIBLE);
-            btnUpdate.setVisibility(View.VISIBLE);
+            
+            if (autoUpdate) {
+                tvAutoUpdateInfo.setText("Auto-update enabled - will check at boot");
+                tvAutoUpdateInfo.setTextColor(Color.GREEN);
+            } else {
+                tvAutoUpdateInfo.setText("Auto-update disabled - manual check only");
+                tvAutoUpdateInfo.setTextColor(Color.RED);
+            }
         }
 
         refreshFileMetadataUI();
@@ -248,11 +418,35 @@ public class MainActivity extends Activity implements GamePropsThermalController
         etPifEditor.setText(content);
     }
 
+    private void loadUpdateStatus() {
+        Context dpContext = createDeviceProtectedStorageContext();
+        SharedPreferences sp = dpContext.getSharedPreferences("uwuh_prefs", Context.MODE_PRIVATE);
+        
+        String lastUpdate = sp.getString("last_update", "Never");
+        String status = sp.getString("update_status", "UNKNOWN");
+        String details = sp.getString("update_details", "");
+        
+        tvLastUpdate.setText("Last update: " + lastUpdate);
+        tvUpdateStatus.setText("Status: " + status);
+        tvUpdateDetails.setText(details);
+        tvUpdateDetails.setVisibility(details.isEmpty() ? View.GONE : View.VISIBLE);
+        
+        if ("UPDATE_AVAILABLE".equals(status)) {
+            tvUpdateStatus.setTextColor(Color.parseColor("#FFA500"));
+        } else if ("SUCCESS".equals(status) || "UP_TO_DATE".equals(status)) {
+            tvUpdateStatus.setTextColor(Color.GREEN);
+        } else if ("FAILED".equals(status) || "ERROR".equals(status)) {
+            tvUpdateStatus.setTextColor(Color.RED);
+        } else {
+            tvUpdateStatus.setTextColor(Color.GRAY);
+        }
+    }
+
     private void openFilePicker(String mimeType, int requestCode) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType(mimeType);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(Intent.createChooser(intent, "Pilih File"), requestCode);
+        startActivityForResult(Intent.createChooser(intent, "Select File"), requestCode);
     }
 
     @Override
@@ -286,10 +480,12 @@ public class MainActivity extends Activity implements GamePropsThermalController
                     e.printStackTrace();
                 }
             }, () -> {
-                Toast.makeText(MainActivity.this, "File berhasil ditulis dan disinkronkan!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "File written and synced successfully", Toast.LENGTH_SHORT).show();
                 refreshFileMetadataUI();
                 loadPifContentToEditText();
-                appendLog("Custom file imported & synced to framework");
+                loadUpdateStatus();
+                refreshLog();
+                UwuhManager.appendLog("Custom file imported & synced to framework");
             });
         }
     }
@@ -301,11 +497,12 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchManual.setEnabled(enabled);
         switchGameProps.setEnabled(enabled);
         switchThermals.setEnabled(enabled);
+        switchAutoUpdate.setEnabled(enabled);
 
         btnPickKeybox.setEnabled(enabled);
         btnPickPIF.setEnabled(enabled);
         btnApplyManual.setEnabled(enabled);
-        btnUpdate.setEnabled(enabled);
+        btnCheckUpdate.setEnabled(enabled);
         btnCopyLog.setEnabled(enabled);
 
         btnGameProps.setEnabled(enabled);
