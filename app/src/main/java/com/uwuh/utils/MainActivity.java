@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -104,7 +105,11 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
         etPifEditor = findViewById(R.id.etPifEditor);
 
-        // EditText settings untuk log
+        // ✅ PIF Editor - Tambahkan scrolling
+        etPifEditor.setMovementMethod(new ScrollingMovementMethod());
+        etPifEditor.setVerticalScrollBarEnabled(true);
+
+        // ✅ Log Viewer - EditText sudah support scroll dengan inputType="textMultiLine"
         tvLog.setHorizontallyScrolling(false);
         tvLog.setVerticalScrollBarEnabled(true);
     }
