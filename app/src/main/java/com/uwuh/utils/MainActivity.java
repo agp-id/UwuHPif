@@ -40,8 +40,8 @@ public class MainActivity extends Activity implements GamePropsThermalController
     private LinearLayout panelCustom, panelGamePropsBtn, panelThermalsBtn, panelAutoUpdate;
     private Button btnPickKeybox, btnPickPIF, btnApplyCustom, btnCheckUpdate, btnCopyLog;
     private Button btnGameProps, btnDevices, btnResetGameProps, btnThermals, btnResetThermals;
-    private TextView tvKeyboxLastApply, tvPifLastApply, tvLog, tvAutoUpdateInfo, tvLastUpdate;
-    private EditText etPifEditor;
+    private TextView tvKeyboxLastApply, tvPifLastApply, tvAutoUpdateInfo, tvLastUpdate;
+    private EditText etPifEditor, tvLog;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -98,6 +98,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
         tvPifLastApply = findViewById(R.id.tvPifLastApply);
         tvLog = findViewById(R.id.tvLog);
+        tvLog.setMovementMethod(new android.text.method.ScrollingMovementMethod());
         tvAutoUpdateInfo = findViewById(R.id.tvAutoUpdateInfo);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
 
@@ -342,8 +343,19 @@ public class MainActivity extends Activity implements GamePropsThermalController
         runOnUiThread(() -> {
             String content = UwuhManager.getLogContent();
             tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
+            
+            // Auto scroll ke baris log paling bawah saat teks bertambah
+            if (tvLog.getLayout() != null) {
+                int scrollAmount = tvLog.getLayout().getLineTop(tvLog.getLineCount()) - tvLog.getHeight();
+                if (scrollAmount > 0) {
+                    tvLog.scrollTo(0, scrollAmount);
+                } else {
+                    tvLog.scrollTo(0, 0);
+                }
+            }
         });
     }
+
 
     private void loadLogContent() {
         String content = UwuhManager.getLogContent();
