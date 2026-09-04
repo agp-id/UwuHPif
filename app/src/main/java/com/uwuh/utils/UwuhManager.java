@@ -201,12 +201,16 @@ public class UwuhManager {
             }
             
             String existing = readFile(LOG_PATH);
-            String newContent = logEntry + existing;
             
+            // 1. Taruh log baru di AKHIR (setelah log lama)
+            String newContent = existing + logEntry;
+            
+            // 2. Jika lebih dari 500 baris, buang baris paling AWAL (log tertua)
             String[] lines = newContent.split("\n");
             if (lines.length > 500) {
                 StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < 500; i++) {
+                int startIndex = lines.length - 500; // Ambil 500 baris terakhir
+                for (int i = startIndex; i < lines.length; i++) {
                     sb.append(lines[i]).append("\n");
                 }
                 newContent = sb.toString();
@@ -217,6 +221,7 @@ public class UwuhManager {
             Log.e(TAG, "Failed to append log", e);
         }
     }
+    
 
     public static String getLogContent() {
         return readFile(LOG_PATH);
