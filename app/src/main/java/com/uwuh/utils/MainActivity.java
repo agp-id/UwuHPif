@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -50,9 +49,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        TextView tvLog = findViewById(R.id.tvLog);
-        tvLog.setMovementMethod(new ScrollingMovementMethod());
 
         initViews();
         setupListeners();
