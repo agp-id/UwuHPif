@@ -55,7 +55,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         updateUiState();
         loadLogContent();
         
-        // ✅ Auto-check update saat app dibuka (jika auto-update enabled)
+        // Auto-check update saat app dibuka (jika auto-update enabled)
         if (UwuhManager.isAutoUpdateEnabled() && !UwuhManager.isCustomMode()) {
             runAsyncWithLock(() -> {
                 checkAndApplyUpdate();
@@ -185,7 +185,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         btnApplyCustom.setOnClickListener(v -> {
             String content = etPifEditor.getText().toString().trim();
             if (content.isEmpty()) {
-                Toast.makeText(MainActivity.this, "PIF content cannot be empty", Toast.LENGTH_SHORT).show();
+                showToast("PIF content cannot be empty");
                 return;
             }
 
@@ -194,7 +194,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
                 String targetPath = useCustom ? UwuhManager.CUST_PIF_PATH : UwuhManager.PIF_PATH;
                 UwuhManager.writeAndSync(MainActivity.this, UwuhManager.MODULE_PIF, targetPath, content);
             }, () -> {
-                Toast.makeText(MainActivity.this, "PIF applied successfully", Toast.LENGTH_SHORT).show();
+                showToast("PIF applied successfully");
                 loadPifContentToEditText();
                 refreshLog();
                 UwuhManager.appendLog("Custom PIF content applied & synced");
@@ -202,11 +202,11 @@ public class MainActivity extends Activity implements GamePropsThermalController
             });
         });
 
-        // ✅ Check & Apply Update - Tetap jalan meskipun auto-update disabled
+        // Check & Apply Update - Tetap jalan meskipun auto-update disabled
         btnCheckUpdate.setOnClickListener(v -> {
             boolean useCustom = switchCustom.isChecked();
             if (useCustom) {
-                Toast.makeText(MainActivity.this, "Custom mode: update not available", Toast.LENGTH_SHORT).show();
+                showToast("Custom mode: update not available");
                 UwuhManager.appendLog("Update skipped: Custom mode enabled");
                 refreshLog();
                 return;
@@ -218,7 +218,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
                 refreshLog();
                 updateLastUpdate();
                 UwuhManager.appendLog("Update check completed");
-                Toast.makeText(MainActivity.this, "Update check completed", Toast.LENGTH_SHORT).show();
+                showToast("Update check completed");
             });
         });
 
@@ -242,10 +242,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
             android.content.ClipData clip = android.content.ClipData.newPlainText("UwuhLog", tvLog.getText().toString());
             if (clipboard != null) {
                 clipboard.setPrimaryClip(clip);
-                Toast.makeText(MainActivity.this, "Log copied to clipboard", Toast.LENGTH_SHORT).show();
+                showToast("Log copied to clipboard");
             }
         });
     }
+
+    // ========================================================================
+    // UPDATE CHECK - FIXED: Semua Toast di UI thread
+    // ========================================================================
 
     private void checkAndApplyUpdate() {
         try {
@@ -260,14 +264,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
                 if (!newKb.equals(currentKb)) {
                     UwuhManager.writeAndSync(this, UwuhManager.MODULE_KEYBOX, UwuhManager.KB_PATH, newKb);
                     UwuhManager.appendLog("Keybox updated from server");
-                    Toast.makeText(this, "Keybox updated", Toast.LENGTH_SHORT).show();
+                    runOnUiThread(() -> showToast("Keybox updated"));
                 } else {
                     UwuhManager.appendLog("Keybox already up to date");
                 }
             } else {
                 if (newKb == null) {
                     UwuhManager.appendLog("Keybox: Download failed");
-                    Toast.makeText(this, "Keybox: Download failed", Toast.LENGTH_SHORT).show();
+                    runOnUiThread(() -> showToast("Keybox: Download failed"));
                 } else if (newKb.isEmpty()) {
                     UwuhManager.appendLog("Keybox: Empty content from server");
                 } else {
@@ -281,14 +285,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
                 if (!newPif.equals(currentPif)) {
                     UwuhManager.writeAndSync(this, UwuhManager.MODULE_PIF, UwuhManager.PIF_PATH, newPif);
                     UwuhManager.appendLog("PIF updated from server");
-                    Toast.makeText(this, "PIF updated", Toast.LENGTH_SHORT).show();
+                    runOnUiThread(() -> showToast("PIF updated"));
                 } else {
                     UwuhManager.appendLog("PIF already up to date");
                 }
             } else {
                 if (newPif == null) {
                     UwuhManager.appendLog("PIF: Download failed");
-                    Toast.makeText(this, "PIF: Download failed", Toast.LENGTH_SHORT).show();
+                    runOnUiThread(() -> showToast("PIF: Download failed"));
                 } else if (newPif.isEmpty()) {
                     UwuhManager.appendLog("PIF: Empty content from server");
                 } else {
@@ -299,7 +303,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         } catch (Exception e) {
             UwuhManager.appendLog("Update check failed: " + e.getMessage());
             Log.e(TAG, "Update check failed", e);
-            Toast.makeText(this, "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            runOnUiThread(() -> showToast("Update failed: " + e.getMessage()));
         }
     }
 
@@ -329,6 +333,26 @@ public class MainActivity extends Activity implements GamePropsThermalController
             return null;
         }
     }
+
+    // ========================================================================
+    // TOAST HELPER - AMAN DI UI THREAD
+    // ========================================================================
+
+    private void showToast(final String message) {
+        runOnUiThread(() -> {
+            Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void showToast(final String message, final int duration) {
+        runOnUiThread(() -> {
+            Toast.makeText(MainActivity.this, message, duration).show();
+        });
+    }
+
+    // ========================================================================
+    // LOG CALLBACK
+    // ========================================================================
 
     @Override
     public void log(String msg) {
@@ -481,7 +505,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
                     e.printStackTrace();
                 }
             }, () -> {
-                Toast.makeText(MainActivity.this, "File written and synced successfully", Toast.LENGTH_SHORT).show();
+                showToast("File written and synced successfully");
                 refreshFileMetadataUI();
                 loadPifContentToEditText();
                 refreshLog();
