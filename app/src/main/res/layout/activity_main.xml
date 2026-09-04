@@ -295,16 +295,22 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvLog"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#1E1E1E"
-        android:gravity="top"
-        android:padding="8dp"
-        android:text="[Log ready]"
-        android:textColor="#00FF00"
-        android:textSize="11sp" />
+   <EditText
+    android:id="@+id/tvLog"
+    android:layout_width="match_parent"
+    android:layout_height="150dp"
+    android:background="#1E1E1E"
+    android:clickable="false"
+    android:cursorVisible="false"
+    android:focusable="false"
+    android:focusableInTouchMode="false"
+    android:gravity="top"
+    android:inputType="textMultiLine"
+    android:isScrollContainer="true"
+    android:padding="8dp"
+    android:scrollbars="vertical"
+    android:textColor="#00FF00"
+    android:textSize="11sp" />
 
         </LinearLayout>
     </ScrollView>
