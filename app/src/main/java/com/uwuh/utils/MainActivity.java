@@ -41,7 +41,8 @@ public class MainActivity extends Activity implements GamePropsThermalController
     private Button btnPickKeybox, btnPickPIF, btnApplyCustom, btnCheckUpdate, btnCopyLog;
     private Button btnGameProps, btnDevices, btnResetGameProps, btnThermals, btnResetThermals;
     private TextView tvKeyboxLastApply, tvPifLastApply, tvAutoUpdateInfo, tvLastUpdate;
-    private EditText etPifEditor, tvLog;
+    private EditText tvLog;
+    private EditText etPifEditor;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -55,7 +56,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         updateUiState();
         loadLogContent();
         
-        // ✅ Auto-check update saat app dibuka (jika auto-update enabled)
+        // Auto-check update saat app dibuka
         if (UwuhManager.isAutoUpdateEnabled() && !UwuhManager.isCustomMode()) {
             runAsyncWithLock(() -> {
                 checkAndApplyUpdate();
@@ -98,11 +99,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvKeyboxLastApply = findViewById(R.id.tvKeyboxLastApply);
         tvPifLastApply = findViewById(R.id.tvPifLastApply);
         tvLog = findViewById(R.id.tvLog);
-        tvLog.setMovementMethod(new android.text.method.ScrollingMovementMethod());
         tvAutoUpdateInfo = findViewById(R.id.tvAutoUpdateInfo);
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
 
         etPifEditor = findViewById(R.id.etPifEditor);
+
+        // EditText settings untuk log
+        tvLog.setHorizontallyScrolling(false);
+        tvLog.setVerticalScrollBarEnabled(true);
     }
 
     private void setupListeners() {
@@ -203,7 +207,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
             });
         });
 
-        // ✅ Check & Apply Update - Tetap jalan meskipun auto-update disabled
         btnCheckUpdate.setOnClickListener(v -> {
             boolean useCustom = switchCustom.isChecked();
             if (useCustom) {
@@ -339,27 +342,38 @@ public class MainActivity extends Activity implements GamePropsThermalController
         });
     }
 
+    /**
+     * Refresh log dan auto-scroll ke bawah
+     */
     private void refreshLog() {
         runOnUiThread(() -> {
             String content = UwuhManager.getLogContent();
             tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
-            
-            // Auto scroll ke baris log paling bawah saat teks bertambah
-            if (tvLog.getLayout() != null) {
-                int scrollAmount = tvLog.getLayout().getLineTop(tvLog.getLineCount()) - tvLog.getHeight();
-                if (scrollAmount > 0) {
-                    tvLog.scrollTo(0, scrollAmount);
-                } else {
-                    tvLog.scrollTo(0, 0);
-                }
-            }
+            scrollToBottom();
         });
     }
 
-
+    /**
+     * Load log dan auto-scroll ke bawah
+     */
     private void loadLogContent() {
         String content = UwuhManager.getLogContent();
         tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
+        scrollToBottom();
+    }
+
+    /**
+     * Scroll EditText ke posisi paling bawah (log terbaru)
+     */
+    private void scrollToBottom() {
+        tvLog.post(() -> {
+            int lineCount = tvLog.getLineCount();
+            if (lineCount > 0 && tvLog.getLayout() != null) {
+                int scrollY = tvLog.getLayout().getLineTop(lineCount - 1);
+                int maxScrollY = Math.max(0, scrollY - tvLog.getHeight() + tvLog.getPaddingBottom());
+                tvLog.scrollTo(0, maxScrollY);
+            }
+        });
     }
 
     private void updateLastUpdate() {
@@ -385,7 +399,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         boolean useGameProps = UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false);
         boolean useThermals = UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false);
 
-        // Set semua switch
         switchBootloader.setChecked(useBootloader);
         switchPIF.setChecked(usePif);
         switchFinsky.setChecked(useFinsky);
@@ -396,7 +409,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchGameProps.setChecked(useGameProps);
         switchThermals.setChecked(useThermals);
 
-        // Visibility
         switchFinsky.setVisibility(usePif ? View.VISIBLE : View.GONE);
         panelGamePropsBtn.setVisibility(useGameProps ? View.VISIBLE : View.GONE);
         panelThermalsBtn.setVisibility(useThermals ? View.VISIBLE : View.GONE);
