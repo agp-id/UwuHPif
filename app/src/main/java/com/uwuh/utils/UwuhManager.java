@@ -193,7 +193,26 @@ public class UwuhManager {
         try {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
             String logEntry = "[" + timestamp + "] " + message + "\n";
-            writeFile(LOG_PATH, logEntry, true);
+            
+            File logFile = new File(LOG_PATH);
+            File dir = logFile.getParentFile();
+            if (dir != null && !dir.exists()) {
+                dir.mkdirs();
+            }
+            
+            String existing = readFile(LOG_PATH);
+            String newContent = logEntry + existing;
+            
+            String[] lines = newContent.split("\n");
+            if (lines.length > 500) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < 500; i++) {
+                    sb.append(lines[i]).append("\n");
+                }
+                newContent = sb.toString();
+            }
+            
+            writeFile(LOG_PATH, newContent);
         } catch (Exception e) {
             Log.e(TAG, "Failed to append log", e);
         }
@@ -204,7 +223,7 @@ public class UwuhManager {
     }
 
     public static void clearLog() {
-        writeFile(LOG_PATH, "", false);
+        writeFile(LOG_PATH, "");
     }
 
     // ========================================================================
@@ -314,7 +333,7 @@ public class UwuhManager {
     // ========================================================================
 
     public static boolean writeAndSync(Context context, String moduleKey, String path, String content) {
-        if (!writeFile(path, content, false)) {
+        if (!writeFile(path, content)) {
             appendLog("Failed to write file: " + path);
             return false;
         }
@@ -451,7 +470,7 @@ public class UwuhManager {
     // FILE OPERATIONS
     // ========================================================================
 
-    public static boolean writeFile(String path, String content, boolean append) {
+    public static boolean writeFile(String path, String content) {
         try {
             File file = new File(path);
             File dir = file.getParentFile();
@@ -461,9 +480,9 @@ public class UwuhManager {
                 dir.setWritable(true, false);
                 dir.setExecutable(true, false);
             }
-            FileOutputStream fos = new FileOutputStream(file, append);
-            fos.write(content.getBytes());
-            fos.close();
+            FileOutputStream f = new FileOutputStream(file);
+            f.write(content.getBytes());
+            f.close();
 
             file.setReadable(true, false);
             file.setWritable(true, false);
