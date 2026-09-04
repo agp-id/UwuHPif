@@ -105,13 +105,14 @@ public class MainActivity extends Activity implements GamePropsThermalController
 
         etPifEditor = findViewById(R.id.etPifEditor);
 
-        // ✅ PIF Editor - Tambahkan scrolling
+        // ✅ PIF Editor - scrolling via MovementMethod
         etPifEditor.setMovementMethod(new ScrollingMovementMethod());
         etPifEditor.setVerticalScrollBarEnabled(true);
 
-        // ✅ Log Viewer - EditText sudah support scroll dengan inputType="textMultiLine"
-        tvLog.setHorizontallyScrolling(false);
+        // ✅ Log Viewer - scrolling via MovementMethod
+        tvLog.setMovementMethod(new ScrollingMovementMethod());
         tvLog.setVerticalScrollBarEnabled(true);
+        tvLog.setHorizontallyScrolling(false);
     }
 
     private void setupListeners() {
@@ -347,9 +348,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         });
     }
 
-    /**
-     * Refresh log dan auto-scroll ke bawah
-     */
     private void refreshLog() {
         runOnUiThread(() -> {
             String content = UwuhManager.getLogContent();
@@ -358,18 +356,12 @@ public class MainActivity extends Activity implements GamePropsThermalController
         });
     }
 
-    /**
-     * Load log dan auto-scroll ke bawah
-     */
     private void loadLogContent() {
         String content = UwuhManager.getLogContent();
         tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
         scrollToBottom();
     }
 
-    /**
-     * Scroll EditText ke posisi paling bawah (log terbaru)
-     */
     private void scrollToBottom() {
         tvLog.post(() -> {
             int lineCount = tvLog.getLineCount();
