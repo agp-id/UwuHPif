@@ -5,312 +5,312 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <ScrollView
+    <!-- Semua konten tanpa ScrollView -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:orientation="vertical"
         android:scrollbars="none">
 
+        <!-- 1. Spoof Bootloader -->
+        <Switch
+            android:id="@+id/switchBootloader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Spoof Bootloader"
+            android:textSize="16sp" />
+
+        <!-- 2. Spoof PIF -->
+        <Switch
+            android:id="@+id/switchPIF"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Spoof PIF"
+            android:textSize="16sp" />
+
+        <!-- 2b. Spoof PS Fingerprint (Finsky) -->
+        <Switch
+            android:id="@+id/switchFinsky"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:text="Spoof Play Store Fingerprint"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <!-- 3. Custom Mode -->
+        <Switch
+            android:id="@+id/switchCustom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Custom Mode (Use Custom Files)"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/panelCustom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnPickKeybox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Pick Custom Keybox"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvKeyboxLastApply"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last apply: -"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/btnPickPIF"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Pick Custom PIF"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvPifLastApply"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Last apply: -"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/etPifEditor"
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                android:layout_marginTop="4dp"
+                android:background="#1E1E1E"
+                android:fadeScrollbars="true"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:padding="8dp"
+                android:scrollbars="vertical"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnApplyCustom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Apply Custom PIF"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- 4. Auto-Update Toggle -->
+        <LinearLayout
+            android:id="@+id/panelAutoUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <Switch
+                android:id="@+id/switchAutoUpdate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Auto-Update (Boot)"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvAutoUpdateInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Check and update at boot"
+                android:textSize="11sp"
+                android:textColor="#888888" />
+        </LinearLayout>
+
+        <!-- Last Update -->
+        <TextView
+            android:id="@+id/tvLastUpdate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Last update: -"
+            android:textSize="11sp" />
+
+        <!-- 5. Check & Apply Update Button -->
+        <Button
+            android:id="@+id/btnCheckUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Check &amp; Apply Update"
+            android:textSize="14sp" />
+
+        <!-- Garis Pemisah -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="#FFFFFF" />
+
+        <!-- 6. Unlimited GPhotos -->
+        <Switch
+            android:id="@+id/switchGPhotos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Unlimited Google Photos"
+            android:textSize="16sp" />
+
+        <!-- 7. Spoof Netflix -->
+        <Switch
+            android:id="@+id/switchNetflix"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Spoof Netflix"
+            android:textSize="16sp" />
+
+        <!-- 8. GameProps -->
+        <Switch
+            android:id="@+id/switchGameProps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Enable GameProps"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/panelGamePropsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnGameProps"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Edit App Config"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnDevices"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Devices"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnResetGameProps"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Reset"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- 9. Thermals -->
+        <Switch
+            android:id="@+id/switchThermals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Enable Per-App Thermals"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:id="@+id/panelThermalsBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnThermals"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Edit Thermals"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btnResetThermals"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Reset"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Garis Putih Pemisah -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="#FFFFFF" />
+
+        <!-- Log Header & Tombol Copy -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- 1. Spoof Bootloader -->
-            <Switch
-                android:id="@+id/switchBootloader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Spoof Bootloader"
-                android:textSize="16sp" />
-
-            <!-- 2. Spoof PIF -->
-            <Switch
-                android:id="@+id/switchPIF"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Spoof PIF"
-                android:textSize="16sp" />
-
-            <!-- 2b. Spoof PS Fingerprint (Finsky) - Muncul jika PIF Active -->
-            <Switch
-                android:id="@+id/switchFinsky"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="4dp"
-                android:text="Spoof Play Store Fingerprint"
-                android:textSize="14sp"
-                android:visibility="gone" />
-
-            <!-- 3. Custom Mode -->
-            <Switch
-                android:id="@+id/switchCustom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Custom Mode (Use Custom Files)"
-                android:textSize="16sp" />
-
-            <LinearLayout
-                android:id="@+id/panelCustom"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <Button
-                    android:id="@+id/btnPickKeybox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Pick Custom Keybox"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/tvKeyboxLastApply"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Last apply: -"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btnPickPIF"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Pick Custom PIF"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/tvPifLastApply"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Last apply: -"
-                    android:textSize="11sp" />
-
-                <EditText
-                    android:id="@+id/etPifEditor"
-                    android:layout_width="match_parent"
-                    android:layout_height="150dp"
-                    android:layout_marginTop="4dp"
-                    android:background="#1E1E1E"
-                    android:fadeScrollbars="true"
-                    android:gravity="top"
-                    android:inputType="textMultiLine"
-                    android:padding="8dp"
-                    android:scrollbars="vertical"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-
-                <Button
-                    android:id="@+id/btnApplyCustom"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Apply Custom PIF"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- 4. Auto-Update Toggle -->
-            <LinearLayout
-                android:id="@+id/panelAutoUpdate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="vertical">
-
-                <Switch
-                    android:id="@+id/switchAutoUpdate"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Auto-Update (Boot)"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/tvAutoUpdateInfo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:text="Check and update at boot"
-                    android:textSize="11sp"
-                    android:textColor="#888888" />
-            </LinearLayout>
-
-            <!-- Last Update (dari file) -->
             <TextView
-                android:id="@+id/tvLastUpdate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="== Log =="
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnCopyLog"
+                style="?android:attr/buttonStyleSmall"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Last update: -"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingLeft="14dp"
+                android:paddingTop="8dp"
+                android:paddingRight="14dp"
+                android:paddingBottom="8dp"
+                android:text="Copy"
                 android:textSize="11sp" />
-
-            <!-- 5. Check & Apply Update Button -->
-            <Button
-                android:id="@+id/btnCheckUpdate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Check &amp; Apply Update"
-                android:textSize="14sp" />
-
-            <!-- Garis Pemisah -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="8dp"
-                android:background="#FFFFFF" />
-
-            <!-- 6. Unlimited GPhotos -->
-            <Switch
-                android:id="@+id/switchGPhotos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Unlimited Google Photos"
-                android:textSize="16sp" />
-
-            <!-- 7. Spoof Netflix -->
-            <Switch
-                android:id="@+id/switchNetflix"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Spoof Netflix"
-                android:textSize="16sp" />
-
-            <!-- 8. GameProps -->
-            <Switch
-                android:id="@+id/switchGameProps"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Enable GameProps"
-                android:textSize="16sp" />
-
-            <LinearLayout
-                android:id="@+id/panelGamePropsBtn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <Button
-                    android:id="@+id/btnGameProps"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Edit App Config"
-                    android:textSize="13sp" />
-
-                <Button
-                    android:id="@+id/btnDevices"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Devices"
-                    android:textSize="13sp" />
-
-                <Button
-                    android:id="@+id/btnResetGameProps"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Reset"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <!-- 9. Thermals -->
-            <Switch
-                android:id="@+id/switchThermals"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Enable Per-App Thermals"
-                android:textSize="16sp" />
-
-            <LinearLayout
-                android:id="@+id/panelThermalsBtn"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:orientation="horizontal"
-                android:visibility="gone">
-
-                <Button
-                    android:id="@+id/btnThermals"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Edit Thermals"
-                    android:textSize="13sp" />
-
-                <Button
-                    android:id="@+id/btnResetThermals"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Reset"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <!-- Garis Putih Pemisah -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                android:background="#FFFFFF" />
-
-            <!-- == Log Header & Tombol Copy Kecil == -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="== Log =="
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <Button
-                    android:id="@+id/btnCopyLog"
-                    style="?android:attr/buttonStyleSmall"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingLeft="14dp"
-                    android:paddingTop="8dp"
-                    android:paddingRight="14dp"
-                    android:paddingBottom="8dp"
-                    android:text="Copy"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-   <EditText
-    android:id="@+id/tvLog"
-    android:layout_width="match_parent"
-    android:layout_height="150dp"
-    android:background="#1E1E1E"
-    android:clickable="true"
-    android:cursorVisible="false"
-    android:focusable="true"
-    android:gravity="top|start"
-    android:inputType="textMultiLine"
-    android:isScrollContainer="true"
-    android:padding="8dp"
-    android:scrollbars="vertical"
-    android:textColor="#00FF00"
-    android:textSize="11sp" />
-
         </LinearLayout>
-    </ScrollView>
+
+        <!-- Log Viewer - EditText (scrollable, read-only) -->
+        <EditText
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="8dp"
+            android:background="#1E1E1E"
+            android:gravity="top"
+            android:padding="8dp"
+            android:scrollbars="vertical"
+            android:text="[Log ready]"
+            android:textColor="#00FF00"
+            android:textSize="11sp"
+            android:inputType="textMultiLine"
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:textIsSelectable="true"
+            android:longClickable="false" />
+
+    </LinearLayout>
 </LinearLayout>
