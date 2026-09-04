@@ -113,6 +113,26 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvLog.setMovementMethod(new ScrollingMovementMethod());
         tvLog.setVerticalScrollBarEnabled(true);
         tvLog.setHorizontallyScrolling(false);
+        // Memperbaiki bentrok scroll antara ScrollView utama dengan EditText PIF
+        etPifEditor.setOnTouchListener((v, event) -> {
+            if (etPifEditor.hasFocus()) {
+                v.getParent().requestDisallowInterceptTouchEvent(true);
+                if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
+                    v.getParent().requestDisallowInterceptTouchEvent(false);
+                }
+            }
+            return false;
+        });
+        
+        // Memperbaiki bentrok scroll antara ScrollView utama dengan Log Box
+        tvLog.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
+                v.getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            return false;
+        });
+
     }
 
     private void setupListeners() {
