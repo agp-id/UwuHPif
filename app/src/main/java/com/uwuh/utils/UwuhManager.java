@@ -201,14 +201,12 @@ public class UwuhManager {
             }
             
             String existing = readFile(LOG_PATH);
-            String newContent = existing + logEntry;
+            String newContent = logEntry + existing;
             
-            // Gunakan \n atau \r?\n agar kompatibel dengan semua jenis baris baru
-            String[] lines = newContent.split("\r?\n");
+            String[] lines = newContent.split("\n");
             if (lines.length > 500) {
                 StringBuilder sb = new StringBuilder();
-                int start = Math.max(0, lines.length - 500);
-                for (int i = start; i < lines.length; i++) {
+                for (int i = 0; i < 500; i++) {
                     sb.append(lines[i]).append("\n");
                 }
                 newContent = sb.toString();
@@ -502,16 +500,9 @@ public class UwuhManager {
             BufferedReader r = new BufferedReader(new FileReader(f));
             StringBuilder sb = new StringBuilder();
             String line;
-            boolean first = true;
-            while ((line = r.readLine()) != null) {
-                if (!first) {
-                    sb.append(System.lineSeparator());
-                }
-                sb.append(line);
-                first = false;
-            }
+            while ((line = r.readLine()) != null) sb.append(line).append("\n");
             r.close();
-            return sb.toString();
+            return sb.toString().trim();
         } catch (Exception e) {
             return "";
         }
@@ -523,16 +514,9 @@ public class UwuhManager {
             BufferedReader r = new BufferedReader(new InputStreamReader(is));
             StringBuilder sb = new StringBuilder();
             String line;
-            boolean first = true;
-            while ((line = r.readLine()) != null) {
-                if (!first) {
-                    sb.append(System.lineSeparator());
-                }
-                sb.append(line);
-                first = false;
-            }
+            while ((line = r.readLine()) != null) sb.append(line).append("\n");
             r.close();
-            return sb.toString();
+            return sb.toString().trim();
         } catch (Exception e) {
             return "";
         }
