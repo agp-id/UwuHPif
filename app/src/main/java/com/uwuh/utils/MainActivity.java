@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -41,8 +40,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
     private LinearLayout panelCustom, panelGamePropsBtn, panelThermalsBtn, panelAutoUpdate;
     private Button btnPickKeybox, btnPickPIF, btnApplyCustom, btnCheckUpdate, btnCopyLog;
     private Button btnGameProps, btnDevices, btnResetGameProps, btnThermals, btnResetThermals;
-    private TextView tvKeyboxLastApply, tvPifLastApply, tvAutoUpdateInfo, tvLastUpdate;
-    private EditText tvLog;
+    private TextView tvKeyboxLastApply, tvPifLastApply, tvLog, tvAutoUpdateInfo, tvLastUpdate;
     private EditText etPifEditor;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -57,7 +55,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         updateUiState();
         loadLogContent();
         
-        // Auto-check update saat app dibuka
+        // ✅ Auto-check update saat app dibuka (jika auto-update enabled)
         if (UwuhManager.isAutoUpdateEnabled() && !UwuhManager.isCustomMode()) {
             runAsyncWithLock(() -> {
                 checkAndApplyUpdate();
@@ -104,35 +102,6 @@ public class MainActivity extends Activity implements GamePropsThermalController
         tvLastUpdate = findViewById(R.id.tvLastUpdate);
 
         etPifEditor = findViewById(R.id.etPifEditor);
-
-        // ✅ PIF Editor - scrolling via MovementMethod
-        etPifEditor.setMovementMethod(new ScrollingMovementMethod());
-        etPifEditor.setVerticalScrollBarEnabled(true);
-
-        // ✅ Log Viewer - scrolling via MovementMethod
-        tvLog.setMovementMethod(new ScrollingMovementMethod());
-        tvLog.setVerticalScrollBarEnabled(true);
-        tvLog.setHorizontallyScrolling(false);
-        // Memperbaiki bentrok scroll antara ScrollView utama dengan EditText PIF
-        etPifEditor.setOnTouchListener((v, event) -> {
-            if (etPifEditor.hasFocus()) {
-                v.getParent().requestDisallowInterceptTouchEvent(true);
-                if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-                    v.getParent().requestDisallowInterceptTouchEvent(false);
-                }
-            }
-            return false;
-        });
-        
-        // Memperbaiki bentrok scroll antara ScrollView utama dengan Log Box
-        tvLog.setOnTouchListener((v, event) -> {
-            v.getParent().requestDisallowInterceptTouchEvent(true);
-            if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-                v.getParent().requestDisallowInterceptTouchEvent(false);
-            }
-            return false;
-        });
-
     }
 
     private void setupListeners() {
@@ -233,6 +202,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
             });
         });
 
+        // ✅ Check & Apply Update - Tetap jalan meskipun auto-update disabled
         btnCheckUpdate.setOnClickListener(v -> {
             boolean useCustom = switchCustom.isChecked();
             if (useCustom) {
@@ -372,25 +342,12 @@ public class MainActivity extends Activity implements GamePropsThermalController
         runOnUiThread(() -> {
             String content = UwuhManager.getLogContent();
             tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
-            scrollToBottom();
         });
     }
 
     private void loadLogContent() {
         String content = UwuhManager.getLogContent();
         tvLog.setText(content.isEmpty() ? "[Log ready]" : content);
-        scrollToBottom();
-    }
-
-    private void scrollToBottom() {
-        tvLog.post(() -> {
-            int lineCount = tvLog.getLineCount();
-            if (lineCount > 0 && tvLog.getLayout() != null) {
-                int scrollY = tvLog.getLayout().getLineTop(lineCount - 1);
-                int maxScrollY = Math.max(0, scrollY - tvLog.getHeight() + tvLog.getPaddingBottom());
-                tvLog.scrollTo(0, maxScrollY);
-            }
-        });
     }
 
     private void updateLastUpdate() {
@@ -416,6 +373,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         boolean useGameProps = UwuhManager.getPropBoolean(UwuhManager.PROP_GAMEPROPS, false);
         boolean useThermals = UwuhManager.getPropBoolean(UwuhManager.PROP_THERMALS, false);
 
+        // Set semua switch
         switchBootloader.setChecked(useBootloader);
         switchPIF.setChecked(usePif);
         switchFinsky.setChecked(useFinsky);
@@ -426,6 +384,7 @@ public class MainActivity extends Activity implements GamePropsThermalController
         switchGameProps.setChecked(useGameProps);
         switchThermals.setChecked(useThermals);
 
+        // Visibility
         switchFinsky.setVisibility(usePif ? View.VISIBLE : View.GONE);
         panelGamePropsBtn.setVisibility(useGameProps ? View.VISIBLE : View.GONE);
         panelThermalsBtn.setVisibility(useThermals ? View.VISIBLE : View.GONE);
