@@ -189,6 +189,34 @@ public class UwuhManager {
     // LOGGING
     // ========================================================================
 
+    // public static void appendLog(String message) {
+        // try {
+            // String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
+            // String logEntry = "[" + timestamp + "] " + message + "\n";
+            
+            // File logFile = new File(LOG_PATH);
+            // File dir = logFile.getParentFile();
+            // if (dir != null && !dir.exists()) {
+                // dir.mkdirs();
+            // }
+            
+            // String existing = readFile(LOG_PATH);
+            // String newContent = logEntry + existing;
+            
+            // String[] lines = newContent.split("\n");
+            // if (lines.length > 500) {
+                // StringBuilder sb = new StringBuilder();
+                // for (int i = 0; i < 500; i++) {
+                    // sb.append(lines[i]).append("\n");
+                // }
+                // newContent = sb.toString();
+            // }
+            
+            // writeFile(LOG_PATH, newContent);
+        // } catch (Exception e) {
+            // Log.e(TAG, "Failed to append log", e);
+        // }
+    // }
     public static void appendLog(String message) {
         try {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
@@ -198,26 +226,23 @@ public class UwuhManager {
             File dir = logFile.getParentFile();
             if (dir != null && !dir.exists()) {
                 dir.mkdirs();
+                dir.setReadable(true, false);
+                dir.setWritable(true, false);
+                dir.setExecutable(true, false);
             }
             
-            String existing = readFile(LOG_PATH);
-            String newContent = logEntry + existing;
-            
-            String[] lines = newContent.split("\n");
-            if (lines.length > 500) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < 500; i++) {
-                    sb.append(lines[i]).append("\n");
-                }
-                newContent = sb.toString();
-            }
-            
-            writeFile(LOG_PATH, newContent);
+            // Parameter 'true' di bawah ini fungsinya persis sama seperti '>>' di Bash
+            FileOutputStream f = new FileOutputStream(logFile, true);
+            f.write(logEntry.getBytes());
+            f.close();
+    
+            logFile.setReadable(true, false);
+            logFile.setWritable(true, false);
         } catch (Exception e) {
             Log.e(TAG, "Failed to append log", e);
         }
     }
-
+    
     public static String getLogContent() {
         return readFile(LOG_PATH);
     }
