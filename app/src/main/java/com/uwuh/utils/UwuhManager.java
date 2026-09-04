@@ -192,7 +192,7 @@ public class UwuhManager {
     public static void appendLog(String message) {
         try {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
-            String logEntry = "[" + timestamp + "] " + message + System.lineSeparator();
+            String logEntry = "[" + timestamp + "] " + message + "\n";
             
             File logFile = new File(LOG_PATH);
             File dir = logFile.getParentFile();
@@ -203,12 +203,13 @@ public class UwuhManager {
             String existing = readFile(LOG_PATH);
             String newContent = existing + logEntry;
             
-            String[] lines = newContent.split(System.lineSeparator());
+            // Gunakan \n atau \r?\n agar kompatibel dengan semua jenis baris baru
+            String[] lines = newContent.split("\r?\n");
             if (lines.length > 500) {
                 StringBuilder sb = new StringBuilder();
                 int start = Math.max(0, lines.length - 500);
                 for (int i = start; i < lines.length; i++) {
-                    sb.append(lines[i]).append(System.lineSeparator());
+                    sb.append(lines[i]).append("\n");
                 }
                 newContent = sb.toString();
             }
