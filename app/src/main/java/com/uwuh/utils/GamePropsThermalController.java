@@ -250,7 +250,7 @@ public class GamePropsThermalController {
     public static void resetGameProps(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_gameprops);
         if (!data.isEmpty()) {
-            if (UwuhManager.writeFile(UwuhManager.GAMEPROPS_PATH, data)) {
+            if (UwuhManager.writeFile(UwuhManager.GAMEPROPS_PATH, data, false)) {
                 boolean success = UwuhManager.forceSyncToFramework(
                     context, 
                     UwuhManager.MODULE_GAMEPROPS, 
@@ -273,7 +273,7 @@ public class GamePropsThermalController {
     public static void resetThermals(Context context, LogCallback callback) {
         String data = UwuhManager.readRawRes(context, R.raw.default_thermals);
         if (!data.isEmpty()) {
-            if (UwuhManager.writeFile(UwuhManager.THERMALS_PATH, data)) {
+            if (UwuhManager.writeFile(UwuhManager.THERMALS_PATH, data, false)) {
                 boolean success = UwuhManager.forceSyncToFramework(
                     context, 
                     UwuhManager.MODULE_THERMALS, 
@@ -392,7 +392,7 @@ public class GamePropsThermalController {
                 }
             }
 
-            return UwuhManager.writeFile(path, root.toString(4));
+            return UwuhManager.writeFile(path, root.toString(4), false);
         } catch (Exception e) { 
             return false; 
         }
