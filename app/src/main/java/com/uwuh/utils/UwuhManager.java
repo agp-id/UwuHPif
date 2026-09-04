@@ -192,7 +192,7 @@ public class UwuhManager {
     public static void appendLog(String message) {
         try {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
-            String logEntry = "[" + timestamp + "] " + message + "\n";
+            String logEntry = "[" + timestamp + "] " + message + System.lineSeparator();
             
             File logFile = new File(LOG_PATH);
             File dir = logFile.getParentFile();
@@ -201,16 +201,14 @@ public class UwuhManager {
             }
             
             String existing = readFile(LOG_PATH);
-            // ✅ Log baru di BAWAH (bukan di atas)
             String newContent = existing + logEntry;
             
-            String[] lines = newContent.split("\n");
+            String[] lines = newContent.split(System.lineSeparator());
             if (lines.length > 500) {
                 StringBuilder sb = new StringBuilder();
-                // ✅ Ambil 500 baris TERAKHIR
                 int start = Math.max(0, lines.length - 500);
                 for (int i = start; i < lines.length; i++) {
-                    sb.append(lines[i]).append("\n");
+                    sb.append(lines[i]).append(System.lineSeparator());
                 }
                 newContent = sb.toString();
             }
@@ -503,9 +501,16 @@ public class UwuhManager {
             BufferedReader r = new BufferedReader(new FileReader(f));
             StringBuilder sb = new StringBuilder();
             String line;
-            while ((line = r.readLine()) != null) sb.append(line).append("\n");
+            boolean first = true;
+            while ((line = r.readLine()) != null) {
+                if (!first) {
+                    sb.append(System.lineSeparator());
+                }
+                sb.append(line);
+                first = false;
+            }
             r.close();
-            return sb.toString().trim();
+            return sb.toString();
         } catch (Exception e) {
             return "";
         }
@@ -517,9 +522,16 @@ public class UwuhManager {
             BufferedReader r = new BufferedReader(new InputStreamReader(is));
             StringBuilder sb = new StringBuilder();
             String line;
-            while ((line = r.readLine()) != null) sb.append(line).append("\n");
+            boolean first = true;
+            while ((line = r.readLine()) != null) {
+                if (!first) {
+                    sb.append(System.lineSeparator());
+                }
+                sb.append(line);
+                first = false;
+            }
             r.close();
-            return sb.toString().trim();
+            return sb.toString();
         } catch (Exception e) {
             return "";
         }
